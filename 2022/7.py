@@ -74,7 +74,6 @@ with open("inputs/7.txt", "r") as file:
     currentDir = tree
     for i, line in enumerate(cout):
         words = line.split(" ")
-        print(words)
         # command
         if (words[0] == "$"):
             if (words[1] == "cd"):
