@@ -1,7 +1,8 @@
 from utils import lmap, sum, mult, to_int
 from functools import reduce
 
-part = 1
+part = 2
+mod = 2 * 3 * 5 * 7 * 11 * 13 * 17 * 19
 
 
 class Monkey:
@@ -32,6 +33,8 @@ class Monkey:
             item, item if self.operation[1] == "old" else self.operation[1])
         if (part == 1):
             new_item //= 3
+        else:
+            new_item %= mod
         return (self.send_to[1 if(new_item % self.divisible_test) else 0], new_item)
 
     def empty(self, monkeys):
@@ -61,7 +64,7 @@ with open("inputs/11.txt", "r") as file:
             cpt += 6
         else:
             cpt += 1
-    for i in range(20 if part == 1 else 1000):
+    for i in range(20 if part == 1 else 10000):
         for monkey in monkeys:
             monkey.empty(monkeys)
     inspection = sorted(lmap(lambda x: x.inspect, monkeys))

@@ -25,3 +25,7 @@ def sum(acc, x):
 
 def mult(acc, x):
     return acc * x
+
+
+def to_int(x):
+    return int(x)
