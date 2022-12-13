@@ -1,5 +1,5 @@
 .PHONY := all
-CURRENT := d11
+CURRENT := d12
 
 all: $(CURRENT)
 
