@@ -12,7 +12,7 @@ def lmap(fn: Callable[[T], S], iterable: Iterable[T]) -> list[S]:
     return list(map(fn, iterable))
 
 
-def lfilter(fn: Callable[[T], bool], iterable: Iterable[T]) -> list[T]:
+def lfilter(fn: Callable[[T], bool] | None, iterable: Iterable[T]) -> list[T]:
     """list of a map object. Shorthand."""
     return list(filter(fn, iterable))
 
