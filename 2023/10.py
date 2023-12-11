@@ -1,228 +1,197 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
-from typing import Callable, Optional, Any, Iterator, TypeVar
-from dataclasses import dataclass, field
+from typing import Iterable
 from queue import Queue
-import os
+from enum import Enum
+import sys
 from more_itertools import flatten
-from utils import lines_of_file, lmap, neighborhood
+from utils import lines_of_file, print_answer
+from utils import grid_map, enumerate_grid, lmap
+from utils_types import Grid, Coordinate
 
-DATA_PATH = "inputs/"
-DAY = os.path.basename(__file__).split(".")[0]
 VERBOSE = True
+sys.setrecursionlimit(100_000)
 
 
-@dataclass
+class Direction(Enum):
+    """A cardinal direction"""
+    N = (-1, 0)
+    S = (1, 0)
+    E = (0, 1)
+    W = (0, -1)
+
+
 class Tile:
     """Represents the sides of the pipe in a Tile"""
-    N: bool = False
-    S: bool = False
-    W: bool = False
-    E: bool = False
-    start: bool = False
+    convertion_table = {
+        '|': {'char': '║', 'dirs': (Direction.N, Direction.S)},
+        '-': {'char': '═', 'dirs': (Direction.E, Direction.W)},
+        'L': {'char': '╚', 'dirs': (Direction.N, Direction.E)},
+        'J': {'char': '╝', 'dirs': (Direction.N, Direction.W)},
+        '7': {'char': '╗', 'dirs': (Direction.W, Direction.S)},
+        'F': {'char': '╔', 'dirs': (Direction.E, Direction.S)},
+        "S": {'char': '¤', 'dirs': Direction},
+        ".": {'char': '.', 'dirs': ()},
+    }
+
+    def __init__(self, dirs: Iterable[Direction], char='.') -> None:
+        self.N, self.S, self.E, self.W = False, False, False, False
+        for d in dirs:
+            setattr(self, d.name, True)
+        self.char = char
+
+    def is_connected_to(self, tile: Tile, d: Direction) -> bool:
+        """Return True if the tile is connected to the other tile in a given direction."""
+        di, dj = d.value
+        return getattr(self, d.name) and getattr(tile, Direction((-di, -dj)).name)
 
     @staticmethod
     def from_char(char: str) -> Tile:
         """Create a Tile from its char representation"""
-        if char == '|':
-            return Tile(N=True, S=True)
-        if char == '-':
-            return Tile(E=True, W=True)
-        if char == 'L':
-            return Tile(N=True, E=True)
-        if char == 'J':
-            return Tile(N=True, W=True)
-        if char == '7':
-            return Tile(W=True, S=True)
-        if char == 'F':
-            return Tile(E=True, S=True)
-        if char == 'S':
-            return Tile(start=True, N=True, S=True, W=True, E=True)
-        if char == '.':
-            return Tile()
-        raise ValueError
+        return Tile(**Tile.convertion_table[char])
 
 
-@dataclass
 class PipeNode:
-    """Represents a Pipe on the grid. Know its neighbors."""
-    pos: tuple[int, int]
-    tile: Tile
-    connected_pipes: list[tuple[int, int]] = field(init=False, default_factory=list)
-    depth: Optional[int] = field(init=False, default=None)
+    """Represents a Pipe on the grid.
+    It knows its neighbors after the `connect` function is called."""
 
-    def _add_neighbor(self, pos: tuple[int, int]) -> None:
-        self.connected_pipes.append(pos)
+    def __init__(self, pos: Coordinate, tile: Tile) -> None:
+        self.pos, self.tile = pos, tile
+        self.connected_pipes: list[Coordinate] = []
+        self.depth = -1
 
     def connect(self, grid: Grid[PipeNode]) -> None:
         """Connect the pipe node to its neighbors"""
         n, m = len(grid), len(grid[0])
-        (i, j), tile = self.pos, self.tile
-        for (ni, nj) in neighborhood(self.pos, (n, m), connectivity=4):
-            next_tile = grid[ni][nj].tile
-
-            upper = i - ni == 1 and tile.N and next_tile.S
-            under = ni - i == 1 and tile.S and next_tile.N
-            left = j - nj == 1 and tile.W and next_tile.E
-            right = nj - j == 1 and tile.E and next_tile.W
-
-            if upper or under or left or right:
+        for d in Direction:
+            (i, j), (di, dj) = self.pos, d.value
+            if not 0 <= i + di < n or not 0 <= j + dj < m:
+                continue
+            next_tile = grid[i + di][j + dj].tile
+            if self.tile.is_connected_to(next_tile, d):
                 # add to neigbors only if they are connected
-                self._add_neighbor((ni, nj))
+                self.connected_pipes.append((i + di, j + dj))
+
+    def __lt__(self, pipe: PipeNode) -> bool:
+        return self.depth < pipe.depth
 
 
-def enumerate_grid(grid: list[list[Any]]) -> Iterator[tuple[tuple[int, int], Any]]:
-    """Enumerate over a grid, yield an element along with its position"""
-    for i, row in enumerate(grid):
-        for j, e in enumerate(row):
-            yield (i, j), e
+class PipeMaze:
+    """Represents the grid of pipes"""
+
+    def __init__(self, tiles: Grid[Tile]) -> None:
+        self.grid = grid_map(PipeNode, tiles, pos=True)
+        grid_map(lambda e: e.connect(self.grid), self.grid)
+
+    @property
+    def start(self) -> PipeNode:
+        """Return the coordinates of the start position"""
+        for _, e in enumerate_grid(self.grid):
+            if e.tile.char == '¤':
+                return e
+        raise ValueError("There is no starting point in the grid")
+
+    def find_path(self) -> None:
+        """Create a path using BFS.
+        It registers the depth of a pipe from the starting point."""
+        self.start.depth = 0
+        fringe: Queue[PipeNode] = Queue()
+        fringe.put(self.start)
+        while not fringe.empty():
+            s = fringe.get()
+            for i, j in s.connected_pipes:
+                n = self.grid[i][j]
+                if s.depth < 0:
+                    raise ValueError("Depth of a previously seen node is None")
+                if n.depth < 0:
+                    n.depth = s.depth + 1
+                    fringe.put(n)
 
 
-T = TypeVar('T')
-S = TypeVar('S')
-Grid = list[list[T]]
+class EdgeGraph:
+    """Represents the edges of the maze where every pipe is inside a box."""
 
+    def __init__(self, maze: PipeMaze) -> None:
+        n, m = len(maze.grid), len(maze.grid[0])
+        self.grid = [['.'] * (m + 1) for _ in range(n + 1)]
+        self.maze = maze
 
-def grid_map(fn: Callable[[tuple[int, int], T], S], grid: Grid[T]) -> Grid[S]:
-    """Map a function over a grid. The function needs to take the position and the element as input.
-    It returns a new grid."""
-    return [[fn((i, j), e) for j, e in enumerate(row)] for i, row in enumerate(grid)]
+    def cross_pipe(self, pos: Coordinate, d: Direction) -> bool:
+        """Returns True if the coordinate obtained with a given direction
+        cross a pipe from the maze."""
+        (i, j) = pos
+        lookup: dict[str, tuple[Coordinate, Coordinate, Direction]] = {
+            'N': ((i - 1, j - 1), (i - 1, j), Direction.E),
+            'S': ((i, j - 1), (i, j), Direction.E),
+            'E': ((i - 1, j), (i, j), Direction.S),
+            'W': ((i - 1, j - 1), (i, j - 1), Direction.S)
+        }
+        (i1, j1), (i2, j2), d = lookup[d.name]
+        pipe1, pipe2 = self.maze.grid[i1][j1], self.maze.grid[i2][j2]
+        are_connected = pipe1.tile.is_connected_to(pipe2.tile, d)
+        on_main_path = pipe1.depth >= 0 and pipe2.depth >= 0
+        return on_main_path and are_connected
 
+    def flood_fill(self, x: Coordinate, color: str) -> None:
+        """Fill a grid from a starting position using `flood_fill` algorithm."""
+        (i, j), n, m = x, len(self.grid), len(self.grid[0])
+        if self.grid[i][j] != '.':
+            return
 
-def find_start_node(grid: Grid[PipeNode]) -> tuple[int, int]:
-    """Return the coordinates of the start position"""
-    for (i, j), e in enumerate_grid(grid):
-        if e.tile.start:
-            return (i, j)
-    raise ValueError("There is no starting point in the grid")
-
-
-def BFS(start_node, grid: Grid[PipeNode]) -> None:
-    """BFS to find the node with the greatest depth"""
-    start_node.depth = 0
-    fringe: Queue[PipeNode] = Queue()
-    fringe.put(start_node)
-    while not fringe.empty():
-        s = fringe.get()
-        for i, j in s.connected_pipes:
-            if i == s.pos[0] and j == s.pos[1]:
+        self.grid[i][j] = color
+        for d in Direction:
+            di, dj = d.value
+            ni, nj = i + di, j + dj
+            if not 0 <= ni < n or not 0 <= nj < m:
                 continue
-            n = grid[i][j]
-            if s.depth is None:
-                raise ValueError("Depth of a previously seen node is None")
-            if n.depth is None:
-                n.depth = s.depth + 1
-                fringe.put(n)
+            on_edge = ni in (0, n - 1) or nj in (0, m - 1)
+            if on_edge or not self.cross_pipe((i, j), d):
+                self.flood_fill((ni, nj), color=color)
 
 
-def paint_BFS(grid: Grid[PipeNode]) -> Grid[str]:
-    """BFS to find the node with the greatest depth"""
-    n, m = len(grid), len(grid[0])
-    edge_grid = [['.'] * (m + 1) for _ in range(n + 1)]
-    edge_grid[0][0] = "0"
-    fringe: Queue[tuple[int, int]] = Queue()
-    fringe.put((0, 0))
-    seen = set()
-    while not fringe.empty():
-        i, j = fringe.get()
-        if (i, j) in seen:
-            raise ValueError("Already seen", (i, j))
-        if edge_grid[i][j] != "0":
-            raise ValueError("weird point in frindge", (i, j))
-        seen.add((i, j))
-        for ni, nj in neighborhood((i, j), (n + 1, m + 1), connectivity=4):
-            if edge_grid[ni][nj] == '0':
-                continue
-            if ni in (0, n) or nj in (0, m):  # on the edge of the grid
-                edge_grid[ni][nj] = "0"
-                fringe.put((ni, nj))
-                continue
-            # check if there is no pipe to cross
-            if i - ni == 1:   # top
-                pipeW, pipeE = grid[i - 1][j - 1], grid[i - 1][j]
-                pipeW = pipeW.depth is not None and pipeW.tile.E
-                pipeE = pipeE.depth is not None and pipeE.tile.W
-                if pipeE and pipeW:  # there is a pipe
-                    continue
-            if ni - i == 1:   # bottom
-                pipeW, pipeE = grid[i][j - 1], grid[i][j]
-                pipeW = pipeW.depth is not None and pipeW.tile.E
-                pipeE = pipeE.depth is not None and pipeE.tile.W
-                if pipeE and pipeW:  # there is a pipe
-                    continue
-            if j - nj == 1:   # left
-                pipeN, pipeS = grid[i - 1][j - 1], grid[i][j - 1]
-                pipeS = pipeS.depth is not None and pipeS.tile.N
-                pipeN = pipeN.depth is not None and pipeN.tile.S
-                if pipeS and pipeN:  # there is a pipe
-                    continue
-            if nj - j == 1:   # right
-                pipeN, pipeS = grid[i - 1][j], grid[i][j]
-                pipeS = pipeS.depth is not None and pipeS.tile.N
-                pipeN = pipeN.depth is not None and pipeN.tile.S
-                if pipeS and pipeN:  # there is a pipe
-                    continue
-            edge_grid[ni][nj] = "0"
-            fringe.put((ni, nj))
-    return edge_grid
-
-
-def get_data() -> list[list[Tile]]:
+def get_data() -> Grid[Tile]:
     """Retrieve all the data to begin with."""
-    l = lines_of_file(f"{DATA_PATH}{DAY}.txt")
-    return lmap(lambda row: lmap(Tile.from_char, row), l)
+    l = lines_of_file("inputs/10.txt")
+    l = lmap(list, l)                   # convert to grid
+    return grid_map(Tile.from_char, l)  # convert to Tiles
 
 
 def part_1() -> None:
     """Code for section 1"""
-    grid = grid_map(PipeNode, get_data())
-    grid_map(lambda pos, e: e.connect(grid), grid)
-    si, sj = find_start_node(grid)
-    BFS(grid[si][sj], grid)
+    maze = PipeMaze(get_data())
+    maze.find_path()
+    max_depth = max(flatten(maze.grid)).depth
 
-    max_depth = max(flatten(grid), key=lambda x: -1 if x.depth is None else x.depth).depth
-
-    print_answer(max_depth, part=1)
+    print_answer(max_depth, day=10, part=1)
 
 
 def part_2() -> None:
     """Code for section 2"""
-    grid = grid_map(PipeNode, get_data())
-    grid_map(lambda pos, e: e.connect(grid), grid)
-    si, sj = find_start_node(grid)
-    BFS(grid[si][sj], grid)  # mark depth
-    painted_grid = paint_BFS(grid)
-    path_grid = grid_map(lambda pos, e: '.' if e.depth is None else "*", grid)
+    maze = PipeMaze(get_data())
+    maze.find_path()
+    edges = EdgeGraph(maze)
+    edges.flood_fill((0, 0), color="0")
 
+    path_grid = grid_map(lambda e: e.tile.char if e.depth >= 0 else ".", maze.grid)
     for (i, j), e in enumerate_grid(path_grid):
-        if e == "*":
+        if e != '.':
             continue
-        if all(painted_grid[i + ni][j + nj] == "." for ni, nj in ((0, 0), (0, 1), (1, 0), (1, 1))):
-            path_grid[i][j] = 'I'
-        if all(painted_grid[i + ni][j + nj] == "0" for ni, nj in ((0, 0), (0, 1), (1, 0), (1, 1))):
-            path_grid[i][j] = '0'
+        # we are not on the path, we can color the current point
+        # A point can be colored if the four points on the corners (edge grid) are the same color
+        corners = ((0, 0), (0, 1), (1, 0), (1, 1))
+        if all(edges.grid[i + ni][j + nj] == "." for ni, nj in corners):
+            path_grid[i][j] = '~'    # we are inside the loop
+        if all(edges.grid[i + ni][j + nj] == "0" for ni, nj in corners):
+            path_grid[i][j] = ' '    # we are outside the loop
 
     if VERBOSE:
-        with open(f"{DATA_PATH}{DAY}.plot.txt", 'w', encoding="utf-8") as f:
-            f.write('\n')
-            # print painted graph
-            for row in painted_grid:
-                f.write("".join(row) + "\n")
-            f.write('\n')
-            # print painted graph
+        with open("visualisations/10.txt", 'w', encoding="utf-8") as f:
+            f.write('\n')  # print painted graph
             for row in path_grid:
                 f.write("".join(row) + "\n")
 
-    interior_points = sum(e == 'I' for e in flatten(path_grid))
-    print_answer(interior_points, part=2)
-
-
-def print_answer(answer: Any, part, print_fn=print) -> None:
-    """Shorthand to print answer."""
-    print("=" * 50)
-    print(f"[DAY {DAY}] Answer to part {part} is:\n\n\t")
-    print_fn(answer)
-    print("\n", "=" * 50, sep="")
+    interior_points = sum(e == '~' for e in flatten(path_grid))
+    print_answer(interior_points, day=10, part=2)
 
 
 if __name__ == "__main__":

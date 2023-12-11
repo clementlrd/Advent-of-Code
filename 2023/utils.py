@@ -80,6 +80,18 @@ def crange(c: tuple[int, int]):
 #  Grid
 #
 
+def grid_map(
+    fn: Callable[[tuple[int, int], T], S] | Callable[[T], S],
+    grid: Grid[T],
+    pos=False
+) -> Grid[S]:
+    """Map a function over a grid. The function needs to take the position and the element as input.
+    It returns a new grid."""
+    return [
+        [fn((i, j), e) if pos else fn(e) for j, e in enumerate(row)]  # type: ignore
+        for i, row in enumerate(grid)
+    ]
+
 
 def enumerate_grid(grid: Grid[T]) -> Iterator[tuple[Coordinate, T]]:
     """Enumerate over a grid, yield an element along with its position."""
