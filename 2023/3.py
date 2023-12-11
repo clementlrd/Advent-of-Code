@@ -1,7 +1,7 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from typing import Iterable, Any
 import os
-from utils import lines_of_file, neighbourhood
+from utils import lines_of_file, neighborhood
 
 DATA_PATH = "inputs/"
 DAY = os.path.basename(__file__).split(".")[0]
@@ -31,7 +31,7 @@ def part_1() -> None:
 
             # we are in a number. keeping track of it
             current_number += c
-            for vi, vj in neighbourhood((i, j), mat_size=(len(l), len(row)), connectivity=8):
+            for vi, vj in neighborhood((i, j), mat_size=(len(l), len(row)), connectivity=8):
                 neighbor = l[vi][vj]
                 if '0' <= neighbor <= '9' or neighbor == '.':
                     # empty space or number, nothing to see here
@@ -67,7 +67,7 @@ def part_2() -> None:
                 continue
 
             current_number += c
-            for vi, vj in neighbourhood((i, j), mat_size=(len(l), len(row)), connectivity=8):
+            for vi, vj in neighborhood((i, j), mat_size=(len(l), len(row)), connectivity=8):
                 neighbor = l[vi][vj]
                 if neighbor == "*":
                     # we found a gear

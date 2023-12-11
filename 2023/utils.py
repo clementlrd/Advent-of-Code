@@ -100,7 +100,7 @@ def print_grid(grid: Grid) -> None:
         print(*r)
 
 
-def neighbourhood(
+def neighborhood(
         x: Coordinate,
         mat_size: tuple[int, int],
         connectivity: Literal[4] | Literal[8] = 4,

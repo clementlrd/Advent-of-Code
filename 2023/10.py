@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from queue import Queue
 import os
 from more_itertools import flatten
-from utils import lines_of_file, lmap, neighbourhood
+from utils import lines_of_file, lmap, neighborhood
 
 DATA_PATH = "inputs/"
 DAY = os.path.basename(__file__).split(".")[0]
@@ -58,7 +58,7 @@ class PipeNode:
         """Connect the pipe node to its neighbors"""
         n, m = len(grid), len(grid[0])
         (i, j), tile = self.pos, self.tile
-        for (ni, nj) in neighbourhood(self.pos, (n, m), connectivity=4):
+        for (ni, nj) in neighborhood(self.pos, (n, m), connectivity=4):
             next_tile = grid[ni][nj].tile
 
             upper = i - ni == 1 and tile.N and next_tile.S
@@ -130,7 +130,7 @@ def paint_BFS(grid: Grid[PipeNode]) -> Grid[str]:
         if edge_grid[i][j] != "0":
             raise ValueError("weird point in frindge", (i, j))
         seen.add((i, j))
-        for ni, nj in neighbourhood((i, j), (n + 1, m + 1), connectivity=4):
+        for ni, nj in neighborhood((i, j), (n + 1, m + 1), connectivity=4):
             if edge_grid[ni][nj] == '0':
                 continue
             if ni in (0, n) or nj in (0, m):  # on the edge of the grid
