@@ -1,10 +1,38 @@
 """A module to make dev faster."""
-from typing import TypeVar, Callable, Literal
+from typing import Callable, Literal
 from collections.abc import Iterable, Iterator
 from itertools import chain
+from utils_types import T, S, Coordinate, Grid
 
-T = TypeVar('T')
-S = TypeVar('S')
+#  ============================
+#
+#  Specific to advent of code
+#
+#  ============================
+
+
+def lines_of_file(path: str) -> Iterator[str]:
+    """Return all lines of a file as an iterator. Remove the `\n` escape character."""
+    with open(path, "r", encoding="UTF8") as file:
+        return map(lambda s: s[:-1], file.readlines())
+
+
+def print_answer(answer, day: int, part: int, print_fn=print) -> None:
+    """Shorthand to print answer."""
+    print("=" * 50)
+    print(f"[DAY {day}] Answer to part {part} is:\n\n\t")
+    print_fn(answer)
+    print("\n", "=" * 50, sep="")
+
+# ======
+#
+#  Utils
+#
+# ======
+
+#
+#  Itertools
+#
 
 
 def lmap(fn: Callable[[T], S], iterable: Iterable[T]) -> list[S]:
@@ -18,7 +46,8 @@ def lfilter(fn: Callable[[T], bool] | None, iterable: Iterable[T]) -> list[T]:
 
 
 def flatten(nested_list: Iterable) -> Iterator:
-    """Flatten a nested list. The list can be arbitrary nested.
+    """[DEPRECATED] Use more_itertools.flatten instead
+    Flatten a nested list. The list can be arbitrary nested.
 
     Example:
     >>> l = [[1, 2, 3], [[3, 4], 5], [6, [7, [8, 9]]]]
@@ -30,12 +59,6 @@ def flatten(nested_list: Iterable) -> Iterator:
     return (e for l in nested_list for e in flatten(l))
 
 
-def print_matrix(matrix: list[Iterable]) -> None:
-    """Print a matrix in a simple format"""
-    for r in matrix:
-        print(r)
-
-
 def find_element(l: list[T], fn: Callable[[T], bool]) -> tuple[int, T | None]:
     """Find an element in a list."""
     for i, x in enumerate(l):
@@ -45,62 +68,79 @@ def find_element(l: list[T], fn: Callable[[T], bool]) -> tuple[int, T | None]:
 
 
 def crange(c: tuple[int, int]):
-    """Enumerate all tuple elements from (0,0) to `c`"""
+    """[DEPRECATED] use itertools.product(range(n), range(m)) instead
+    Enumerate all tuple elements from (0,0) to `c`"""
     x, y = c
     for i in range(x):
         for j in range(y):
             yield (i, j)
 
 
+#
+#  Grid
+#
+
+
+def enumerate_grid(grid: Grid[T]) -> Iterator[tuple[Coordinate, T]]:
+    """Enumerate over a grid, yield an element along with its position."""
+    for i, row in enumerate(grid):
+        for j, e in enumerate(row):
+            yield (i, j), e
+
+
+def enumerate_cols(grid: Grid[T]) -> Iterator[tuple[int, list[T]]]:
+    """Iterate over the columns of a grid."""
+    for j in range(len(grid[0])):
+        yield j, [grid[i][j] for i in range(len(grid))]
+
+
+def print_grid(grid: Grid) -> None:
+    """Print a matrix in a simple format."""
+    for r in grid:
+        print(*r)
+
+
 def neighbourhood(
-        x: tuple[int, int],
+        x: Coordinate,
         mat_size: tuple[int, int],
-        connectivity: Literal[4] | Literal[8] = 4
-) -> Iterator:
+        connectivity: Literal[4] | Literal[8] = 4,
+        coordinates=True
+) -> Iterator[Coordinate]:
     """enumerate all neighbors positions in a grid with the given connectivity.
     Take into account the size of the grid.
 
     Args:
-        x (tuple[int, int]): The current position.
+        x (Coordinate): The current position.
         mat_size (tuple[int, int]): The size of the matrix.
         connectivity (int, optional): The connectivity of the grid. Defaults to 4.
+        coordinates (bool, optional): Returns the coordinates if True, returns the directions
+        otherwise. Defaults True.
 
     Raises:
         NotImplementedError: Only a connectivity of 4 and 8 is implemented
 
     Yields:
-        Iterator: A position of a neighbor.
+        Iterator[Coordinates]: A position of a neighbor.
     """
     n, m, i, j = *mat_size, *x
 
-    cross = iter((
-        (max(i - 1, 0), j),
-        (min(i + 1, n - 1), j),
-        (i, max(j - 1, 0)),
-        (i, min(j + 1, m - 1))
-    ))
+    c4 = iter(((-1, 0), (1, 0), (0, -1), (0, 1)))
+    c8 = iter(((-1, -1), (1, 1), (-1, 1), (1, -1)))
 
-    if connectivity == 4:
-        return cross
-
-    diag = iter((
-        (max(i - 1, 0), max(j - 1, 0)),
-        (min(i + 1, n - 1), min(j + 1, m - 1)),
-        (min(i + 1, n - 1), max(j - 1, 0)),
-        (max(i - 1, 0), min(j + 1, m - 1))
-    ))
-
+    directions = c4
     if connectivity == 8:
-        return chain(cross, diag)
+        directions = chain(directions, c8)
+    if connectivity not in (4, 8):
+        raise NotImplementedError(f"connectivity {connectivity} is not supported")
 
-    raise NotImplementedError
+    for di, dj in directions:
+        if 0 <= i + di < n and 0 <= j + dj < m:
+            if coordinates:
+                yield i + di, j + dj
+            else:
+                yield di, dj
 
 
-def lines_of_file(path: str) -> Iterator[str]:
-    """Return all lines of a file as an iterator. Remove the `\n` escape character."""
-    with open(path, "r", encoding="UTF8") as file:
-        return map(lambda s: s[:-1], file.readlines())
-
-
-if __name__ == "__main__":
-    pass
+def manhattan_distance(x1: Coordinate, x2: Coordinate) -> int:
+    """Compute manhattan distance for two points."""
+    return sum(abs(x - y) for x, y in zip(x1, x2))
