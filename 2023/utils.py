@@ -45,6 +45,11 @@ def lfilter(fn: Callable[[T], bool] | None, iterable: Iterable[T]) -> list[T]:
     return list(filter(fn, iterable))
 
 
+def iter_split(char: str, iterable: Iterable[str]) -> Iterable[list[str]]:
+    """Map a string into a list of strings split on a acharacter. Shorthand."""
+    return map(lambda s: s.split(char), iterable)
+
+
 def flatten(nested_list: Iterable) -> Iterator:
     """[DEPRECATED] Use more_itertools.flatten instead
     Flatten a nested list. The list can be arbitrary nested.
