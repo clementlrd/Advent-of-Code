@@ -111,6 +111,10 @@ def enumerate_cols(grid: Grid[T]) -> Iterator[tuple[int, list[T]]]:
         yield j, [grid[i][j] for i in range(len(grid))]
 
 
+def transpose(grid: Grid[T]) -> Grid[T]:
+    return [[grid[i][j] for i in range(len(grid))] for j in range(len(grid[0]))]
+
+
 def print_grid(grid: Grid) -> None:
     """Print a matrix in a simple format."""
     for r in grid:

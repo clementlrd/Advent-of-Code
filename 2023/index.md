@@ -11,3 +11,5 @@
 9. **[Mirage Maintenance:](https://adventofcode.com/2023/day/9)** Predict values given a sequence by there differences
 10. **[Pipe Maze:](https://adventofcode.com/2023/day/10)** Find the length of a loop and determine which part is inside
 11. **[Cosmic Expansion:](https://adventofcode.com/2023/day/11)** Compute distance between galaxies considering space expansion
+12. **[Hot Springs:](https://adventofcode.com/2023/day/12)** Find permutations that complete a sequence with unknown values. (Use cache)
+13. **[Point of Incidence:](https://adventofcode.com/2023/day/13)** Find reflections in mirrors. There can be a smudge making the two non-symmetrical.
