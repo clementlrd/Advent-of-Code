@@ -10,7 +10,7 @@ TEST = True
 
 def get_data() -> Iterable[str]:
     """Retrieve all the data to begin with."""
-    l = lines_of_file(f"input/{DAY if not TEST else 'test'}.txt")
+    l = lines_of_file(f"inputs/{DAY if not TEST else 'test'}.txt")
     return l
 
 
