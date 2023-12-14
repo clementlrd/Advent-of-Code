@@ -2,6 +2,7 @@
 from typing import Callable, Literal
 from collections.abc import Iterable, Iterator
 from itertools import chain
+from copy import deepcopy
 from utils_types import T, S, Coordinate, Grid
 
 #  ============================
@@ -112,7 +113,25 @@ def enumerate_cols(grid: Grid[T]) -> Iterator[tuple[int, list[T]]]:
 
 
 def transpose(grid: Grid[T]) -> Grid[T]:
+    """Transpose a grid as it was a matrix.
+    It creates a deepcopy."""
     return [[grid[i][j] for i in range(len(grid))] for j in range(len(grid[0]))]
+
+
+def mirror(grid: Grid[T], axis=1) -> Grid[T]:
+    """Mirror the grid along a given axis.
+    It creates a deepcopy."""
+    if axis == 0:
+        return deepcopy(grid[::-1])
+    if axis == 1:
+        return [row[::-1] for row in grid]
+    raise ValueError(f"axis {axis} is not valid. Please enter 0 or 1.")
+
+
+def rotate90(grid: Grid[T], clockwize=True) -> Grid[T]:
+    """Rotates a grid clockwise or not. Defaults: Clockwize.
+    It creates a deepcopy."""
+    return mirror(transpose(grid), axis=clockwize)
 
 
 def print_grid(grid: Grid) -> None:

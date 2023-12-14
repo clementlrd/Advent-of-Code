@@ -13,3 +13,4 @@
 11. **[Cosmic Expansion:](https://adventofcode.com/2023/day/11)** Compute distance between galaxies considering space expansion
 12. **[Hot Springs:](https://adventofcode.com/2023/day/12)** Find permutations that complete a sequence with unknown values. (Use cache)
 13. **[Point of Incidence:](https://adventofcode.com/2023/day/13)** Find reflections in mirrors. There can be a smudge making the two non-symmetrical.
+14. **[Parabolic Reflector Dish:](https://adventofcode.com/2023/day/14)** Move round rocks with gravity and cyclic rotations.
