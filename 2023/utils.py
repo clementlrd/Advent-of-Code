@@ -1,5 +1,5 @@
 """A module to make dev faster."""
-from typing import Callable, Literal
+from typing import Callable, Literal, Any
 from collections.abc import Iterable, Iterator
 from itertools import chain
 from copy import deepcopy
@@ -100,17 +100,23 @@ def crange(c: tuple[int, int]):
             yield (i, j)
 
 
-def compose(*func, repeat: int = 1) -> Callable:
+def compose(
+        fn: Callable[[Any], S],
+        *func: Callable[[T], Any],
+        repeat: int = 1
+) -> Callable[[T], S]:
     """Compose functions.
     Returns a function that chain all the functions given in parameter.
 
     Args:
         *func (Callable): the functions chained, called from right to left.
-        repeat (int): The number of times to repeat the composition. Default: 1."""
+        repeat (int): The number of times to repeat the composition. Default: 1.
+    """  # fn is used for typing: it allows to determine the output type.
+
     def comp(f, g):
         return lambda x: f(g(x))
 
-    return reduce(comp, func * repeat)
+    return reduce(comp, (fn, *func) * repeat)
 
 #
 #  Grid
