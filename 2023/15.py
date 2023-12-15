@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from functools import reduce
-from utils import lines_of_file, section, find_element
+from utils import lines_of_file, section, find_element, compose
 
 InputData = list[str]
 
@@ -69,7 +69,8 @@ def focusing_power(boxes: list[Box]) -> int:
 
 def get_data() -> InputData:
     """Retrieve the line of commands and split them."""
-    return next(lines_of_file("inputs/15.txt")).split(',')
+    data = next(lines_of_file("inputs/15.txt"))
+    return data.split(',')
 
 
 @section(day=15, part=1)
@@ -81,7 +82,7 @@ def part_1(data: InputData) -> int:
 @section(day=15, part=2)
 def part_2(data: InputData) -> int:
     """Code for section 2"""
-    return focusing_power(execute_procedure(data))
+    return compose(focusing_power, execute_procedure)(data)
 
 
 if __name__ == "__main__":
