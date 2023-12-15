@@ -3,6 +3,8 @@ from typing import Callable, Literal
 from collections.abc import Iterable, Iterator
 from itertools import chain
 from copy import deepcopy
+from functools import reduce
+import time
 from utils_types import T, S, Coordinate, Grid
 
 #  ============================
@@ -12,9 +14,25 @@ from utils_types import T, S, Coordinate, Grid
 #  ============================
 
 
+def section(day: int, part: int):
+    """Section decorator to handle result printing and time execution."""
+    def decorator(part_fn: Callable):
+        def wrapper(*args, **kwargs) -> None:
+            t0 = time.time()
+            result = part_fn(*args, **kwargs)
+            execution_time = time.time() - t0
+
+            def print_fn(x):
+                return print(x, f"\n\nExecution time: {execution_time:.5f}s", end="")
+            print_answer(result, day=day, part=part, print_fn=print_fn)
+
+        return wrapper
+    return decorator
+
+
 def lines_of_file(path: str) -> Iterator[str]:
     """Return all lines of a file as an iterator. Remove the `\n` escape character."""
-    with open(path, "r", encoding="UTF8") as file:
+    with open(path, "r", encoding="utf-8") as file:
         return map(lambda s: s[:-1], file.readlines())
 
 
@@ -82,9 +100,22 @@ def crange(c: tuple[int, int]):
             yield (i, j)
 
 
+def compose(*func, repeat: int = 1) -> Callable:
+    """Compose functions.
+    Returns a function that chain all the functions given in parameter.
+
+    Args:
+        *func (Callable): the functions chained, called from right to left.
+        repeat (int): The number of times to repeat the composition. Default: 1."""
+    def comp(f, g):
+        return lambda x: f(g(x))
+
+    return reduce(comp, func * repeat)
+
 #
 #  Grid
 #
+
 
 def grid_map(
     fn: Callable[[tuple[int, int], T], S] | Callable[[T], S],
