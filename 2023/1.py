@@ -1,11 +1,10 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
-from typing import Any
-import os
+from typing import Callable, Iterator
+from functools import partial
 import re
-from utils import lines_of_file
+from utils import lines_of_file, section, lfilter, compose
 
-DATA_PATH = "inputs/"
-DAY = os.path.basename(__file__).split(".")[0]
+InputData = Iterator[str]
 
 str_digits = {
     'one': '1',
@@ -20,62 +19,62 @@ str_digits = {
 }
 
 
-def get_data():
-    """Retrieve all the data to begin with."""
-    return lines_of_file(f"{DATA_PATH}{DAY}.txt")
+def calibration_value(s: str) -> int:
+    """Compute calibration value of a string with integers represented as digits."""
+    integers = lfilter(lambda c: '1' <= c <= '9', s)
+    return int(integers[0] + integers[-1])
 
 
-def int_in_str(s: str) -> str:
-    """Retrieve int characters as a substring from an original string."""
-    return "".join(filter(lambda c: '1' <= c <= '9', s))
+def tokenize_first_found(s: str, reverse=False) -> str:
+    """Tokenize the first handwritten digit seen in the string.
+    If `reverse` is set to True, it tokenizes the last one."""
+    group = '|'.join(str_digits.keys())
+    if not reverse:
+        return re.sub(f"({group})", r'<\1>', s, count=1)
+    return re.sub(f"({group[::-1]})", r'>\1<', s[::-1], count=1)[::-1]
 
 
-def part_1() -> None:
-    """Code for section 1"""
-    # retrieve int in string and compute score
-    digits = map(int_in_str, get_data())
-    calibration_values = map(lambda s: int(s[0] + s[-1]), digits)
-
-    print_answer(sum(calibration_values), part=1)
-
-
-def replace_all_digit_tokens(s: str) -> str:
+def token_to_digit_fn(token_value: str) -> Callable[[str], str]:
     """Replace all digit tokens into its integer representation"""
-    for str_digit, digit in str_digits.items():
-        s = re.sub(f'<{str_digit}>', digit, s)
-    return s
+    return lambda s: re.sub(f'<{token_value}>', str_digits[token_value], s)
 
 
-def part_2() -> None:
+def get_data() -> InputData:
+    """Retrieve all the data to begin with."""
+    return lines_of_file("inputs/1.txt")
+
+
+@section(day=1, part=1)
+def part_1(data: InputData) -> int:
+    """Code for section 1"""
+    return sum(map(calibration_value, data))
+
+
+@section(day=1, part=2)
+def part_2(data: InputData) -> int:
     """Code for section 2"""
-    l = list(get_data())
+    l = list(data)   # convert to list to use the iterator twice
 
-    # transform the first word into a token then into an int
-    reg = rf"({'|'.join(str_digits.keys())})"
-    start_digits = map(lambda s: re.sub(reg, r'<\1>', s, count=1), l)  # create token
-    start_digits = map(replace_all_digit_tokens, start_digits)
-    start_digits = map(int_in_str, start_digits)
+    # create a function to convert all token types to the corresponding digit
+    token_to_digit_map = map(token_to_digit_fn, str_digits.keys())
+    tokens_to_digits = compose(*token_to_digit_map)
 
-    # transform the last word with the same process (reverse string order)
-    reg_rev = rf"({'|'.join(str_digits.keys())[::-1]})"
-    end_digits = map(lambda s: re.sub(reg_rev, r'>\1<', s[::-1], count=1)[::-1], l)  # create token
-    end_digits = map(replace_all_digit_tokens, end_digits)
-    end_digits = map(int_in_str, end_digits)
+    # transform the first handwritten digit into a token then into a digit
+    transform_first = compose(tokens_to_digits, tokenize_first_found)
+    start_digits = map(transform_first, l)
 
-    # compute calibration value
-    calibration_values = map(lambda s: int(s[0][0] + s[1][-1]), zip(start_digits, end_digits))
+    # transform the last word with the same process
+    tokenize_last_found = partial(tokenize_first_found, reverse=True)
+    transform_last = compose(tokens_to_digits, tokenize_last_found)
+    end_digits = map(transform_last, l)
 
-    print_answer(sum(calibration_values), part=2)
+    # add the two strings to call calibration value function
+    # because it depends only on the values on the edges
+    l = map("".join, zip(start_digits, end_digits))
 
-
-def print_answer(answer: Any, part: int, print_fn=print) -> None:
-    """Shorthand to print answer."""
-    print("=" * 50)
-    print(f"[DAY {DAY}] Answer to part {part} is:\n\n\t")
-    print_fn(answer)
-    print("\n", "=" * 50, sep="")
+    return sum(map(calibration_value, l))
 
 
 if __name__ == "__main__":
-    part_1()  # 55208
-    part_2()  # 54578
+    part_1(get_data())  # P1: 55208
+    part_2(get_data())  # P2: 54578
