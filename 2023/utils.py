@@ -2,7 +2,6 @@
 from typing import Callable, Literal, Any
 from collections.abc import Iterable, Iterator
 from itertools import chain
-from copy import deepcopy
 from functools import reduce
 import time
 from utils_types import T, S, Coordinate, Grid
@@ -150,25 +149,28 @@ def enumerate_cols(grid: Grid[T]) -> Iterator[tuple[int, list[T]]]:
 
 
 def transpose(grid: Grid[T]) -> Grid[T]:
-    """Transpose a grid as it was a matrix.
-    It creates a deepcopy."""
+    """Transpose a grid as it was a matrix."""
     return [[grid[i][j] for i in range(len(grid))] for j in range(len(grid[0]))]
 
 
 def mirror(grid: Grid[T], axis=1) -> Grid[T]:
-    """Mirror the grid along a given axis.
-    It creates a deepcopy."""
+    """Mirror the grid along a given axis."""
     if axis == 0:
-        return deepcopy(grid[::-1])
+        return grid[::-1]
     if axis == 1:
         return [row[::-1] for row in grid]
     raise ValueError(f"axis {axis} is not valid. Please enter 0 or 1.")
 
 
 def rotate90(grid: Grid[T], clockwize=True) -> Grid[T]:
-    """Rotates a grid clockwise or not. Defaults: Clockwize.
-    It creates a deepcopy."""
+    """Rotates a grid clockwise or not. Defaults: Clockwize."""
     return mirror(transpose(grid), axis=clockwize)
+
+
+def subgrid(grid: Grid[T], start: Coordinate, end: Coordinate) -> Grid[T]:
+    """Create a subgrid of a grid. Works as range objects, but in two dimensions."""
+    (si, sj), (ei, ej) = start, end
+    return [row[sj:ej] for row in grid[si:ei]]
 
 
 def print_grid(grid: Grid) -> None:
