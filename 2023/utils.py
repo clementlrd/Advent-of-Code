@@ -1,5 +1,5 @@
 """A module to make dev faster."""
-from typing import Callable, Literal, Any
+from typing import Callable, Literal, Any, Optional, TextIO
 from collections.abc import Iterable, Iterator
 from itertools import chain
 from functools import reduce
@@ -173,10 +173,12 @@ def subgrid(grid: Grid[T], start: Coordinate, end: Coordinate) -> Grid[T]:
     return [row[sj:ej] for row in grid[si:ei]]
 
 
-def print_grid(grid: Grid) -> None:
-    """Print a matrix in a simple format."""
-    for r in grid:
-        print(*r)
+def print_grid(grid: Grid, file: Optional[TextIO] = None, join: str = ' ') -> None:
+    """Print a grid in a simple format.
+    If a file is given, the grid is printed in it."""
+    output = file.write if file is not None else print
+    for row in grid:
+        output(join.join(row) + '\n')
 
 
 def neighborhood(

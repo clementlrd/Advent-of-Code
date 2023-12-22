@@ -1,53 +1,111 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
-from utils import lines_of_file, section, lmap, print_grid, neighborhood
+from typing import Optional
+from queue import Queue
+from copy import deepcopy
+from utils import lines_of_file, section, lmap, neighborhood, enumerate_grid, print_grid
 from utils_types import Coordinate, Grid
 
-DAY = 21
-TEST = False
+VERBOSE = True
 
 InputData = Grid[str]
 
 
 def get_data() -> InputData:
     """Retrieve all the data to begin with."""
-    l = lines_of_file(f"inputs/{DAY if not TEST else 'test'}.txt")
-    return lmap(list, l)
+    return lmap(list, lines_of_file("inputs/21.txt"))  # create grid
 
 
-def naive_steps(grid: Grid[str], max_depth: int = 64) -> int:
-    """Compute all the steps the Elf gardener can make."""
+def bfs_steps(grid: Grid[str], max_depth: int, start: Optional[Coordinate] = None) -> int:
+    """Compute all the steps the elf gardener can make from a starting position.
+    Default: start is the 'S' tile in the center.
+
+    BFS on a graph: keep only postions whose depth as the same parity than `max_depth`."""
     n, m = len(grid), len(grid[0])
-    start = [(i, j) for i, row in enumerate(grid) for j, e in enumerate(row) if e == 'S'][0]
-    current_positions = set[Coordinate]((start,))
-    for _ in range(max_depth):
-        new_positions = set[Coordinate]()
-        while len(current_positions) > 0:
-            for ni, nj in neighborhood(current_positions.pop(), (n, m), connectivity=4):
-                if grid[ni][nj] == '#':
-                    continue
-                new_positions.add((ni, nj))
-        current_positions = new_positions
+    if start is None:
+        start = [p for p, e in enumerate_grid(grid) if e == 'S'][0]
 
-    for ni, nj in current_positions:
-        grid[ni][nj] = 'O'
-    print_grid(grid)
-    return len(current_positions)
+    final_positions = set[Coordinate]()
+    queue = Queue[tuple[Coordinate, int]]()  # keep depth
+    queue.put((start, 0))
+    seen = set[Coordinate]()
+    while not queue.empty():
+        pos, depth = queue.get()
+
+        if depth > max_depth or pos in seen:
+            continue
+        seen.add(pos)
+
+        if depth % 2 == max_depth % 2:
+            final_positions.add(pos)  # will be a valid position when max_depth is reached
+
+        for ni, nj in neighborhood(pos, (n, m), connectivity=4):
+            if grid[ni][nj] == '#' or (ni, nj) in seen:
+                continue
+            queue.put(((ni, nj), depth + 1))
+
+    if VERBOSE:
+        with open('visualisations/21.txt', "w", encoding="utf-8") as f:
+            str_grid = deepcopy(grid)
+            for ni, nj in final_positions:
+                if (ni, nj) != (65, 65):
+                    str_grid[ni][nj] = 'O'
+            print_grid(str_grid, f, join='')
+
+    return len(final_positions)
 
 
-@section(day=DAY, part=1)
-def part_1(data: InputData) -> int:
+@section(day=21, part=1)
+def part_1(grid: InputData) -> int:
     """Code for section 1"""
-    return naive_steps(data)
+    return bfs_steps(grid, max_depth=64)
 
 
-@section(day=DAY, part=2)
-def part_2(data: InputData) -> int:
-    """Code for section 2"""
-    # max-depth = 26501365
-    return 0
+@section(day=21, part=2)
+def part_2(grid: InputData) -> int:
+    """Code for section 2
+
+    I help myself with some coments:
+    - [explaination](https://github.com/villuna/aoc23/wiki/A-Geometric-solution-to-advent-of-code-2023,-day-21)
+    - [viz](https://raw.githubusercontent.com/democat3457/AdventOfCode/master/2023/resources/day21gridvis.png)
+
+    It was also possible to do it with a polynomial equation,
+    but it seemed a little too obscure to me.
+    """
+    n = (26501365 - 65) // 131
+
+    full_even = bfs_steps(grid, max_depth=130)
+    full_odd = bfs_steps(grid, max_depth=131)
+
+    big_odd_corners = {
+        'TR': bfs_steps(grid, max_depth=130 + 65, start=(130, 0)),
+        'TL': bfs_steps(grid, max_depth=130 + 65, start=(130, 130)),
+        'BR': bfs_steps(grid, max_depth=130 + 65, start=(0, 0)),
+        'BL': bfs_steps(grid, max_depth=130 + 65, start=(0, 130)),
+    }
+
+    small_even_corners = {
+        'TR': bfs_steps(grid, max_depth=64, start=(130, 0)),
+        'TL': bfs_steps(grid, max_depth=64, start=(130, 130)),
+        'BR': bfs_steps(grid, max_depth=64, start=(0, 0)),
+        'BL': bfs_steps(grid, max_depth=64, start=(0, 130)),
+    }
+
+    mids = {
+        'T': bfs_steps(grid, max_depth=131, start=(131, 65)),
+        'L': bfs_steps(grid, max_depth=131, start=(65, 131)),
+        'R': bfs_steps(grid, max_depth=131, start=(65, -1)),
+        'B': bfs_steps(grid, max_depth=131, start=(-1, 65)),
+    }
+
+    return n**2 * full_even \
+        + (n - 1)**2 * full_odd \
+        + (n - 1) * sum(big_odd_corners.values()) \
+        + n * sum(small_even_corners.values()) \
+        + sum(mids.values())
 
 
 if __name__ == "__main__":
     part_1(get_data())  # P1: 3542
-    part_2(get_data())  # P2:
+    VERBOSE = False
+    part_2(get_data())  # P2: 593174122420825
