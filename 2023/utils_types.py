@@ -5,3 +5,4 @@ T = TypeVar('T')
 S = TypeVar('S')
 Grid = list[list[T]]
 Coordinate = tuple[int, int]
+Coordinate3D = tuple[int, int, int]
