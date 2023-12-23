@@ -4,45 +4,64 @@ from typing import Iterator, Iterable, Optional
 from dataclasses import dataclass, field
 from copy import deepcopy
 
-import matplotlib.pyplot as plt          # noqa
-from mpl_toolkits.mplot3d import Axes3D  # noqa
+import matplotlib.pyplot as plt
+# pylint: disable-next=unused-import  # It has the side effect to allow 3D projection
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 from numpy.random import sample
+from tqdm import tqdm
 
 from utils import lines_of_file, section, lmap, lfilter
 from utils_types import Coordinate3D, Coordinate
-from tqdm import tqdm
 
-DAY = 22
-TEST = False
 VERBOSE = False
 
 
 @dataclass
 class Brick:
+    """Represents a brick of sand."""
     direction: int
     length: int
     pos: Coordinate3D
-    color: tuple[float, ...] = field(default_factory=lambda: tuple(sample(size=3)))
-    proj: set[Coordinate] = field(init=False)  # projection in (x,y) coordinates
+    color: tuple[float, ...] = field(default_factory=lambda: tuple(sample(size=3)))  # display color
+    proj: set[Coordinate] = field(init=False)                      # projection in (x,y) coordinates
 
     def __post_init__(self) -> None:
         self.proj = set(map(lambda c: c[:-1], self))
 
     @property
     def z(self) -> int:
+        """Shorthand for z coordinate."""
         return self.pos[-1]
 
     @property
     def z_positions(self) -> Iterator[int]:
+        """Sharthand to access all the z coordinates occupied by the brick."""
         if self.direction == 2:
             for l in range(self.length if self.direction == 2 else 1):
                 yield self.z + l
             return
         yield self.z
 
+    def is_brick_under(self, brick: Brick) -> bool:
+        """Returns whether the given brick is under the current_brick."""
+        return len(brick.proj & self.proj) > 0 and brick < self
+
+    def __lt__(self, brick: Brick) -> bool:
+        """Compare two bricks based on brick height."""
+        if self.z == brick.z and self.direction == 2:
+            return self.length < brick.length
+        return self.z < brick.z
+
+    def __iter__(self) -> Iterator[Coordinate3D]:
+        """Iterate over all brick's coordinates."""
+        for l in range(self.length):
+            x, y, z = (x + (l if self.direction == i else 0) for i, x in enumerate(self.pos))
+            yield (x, y, z)
+
     @classmethod
     def from_repr(cls, _repr: str) -> Brick:
+        """Create a brick from its representation 'x1,y1,z1~x2,y2,z2' """
         start, end = _repr.split('~')
         start = lmap(int, start.split(','))
         end = lmap(int, end.split(','))
@@ -54,21 +73,12 @@ class Brick:
             - min(start[direction], end[direction]) + 1
         return cls(direction, length, (x, y, z))
 
-    def is_brick_under(self, brick: Brick):
-        return len(brick.proj & self.proj) > 0 and brick < self
-
-    def __lt__(self, brick: Brick) -> bool:
-        if self.z == brick.z and self.direction == 2:
-            return self.length < brick.length
-        return self.z < brick.z
-
-    def __iter__(self) -> Iterator[Coordinate3D]:
-        for l in range(self.length):
-            x, y, z = (x + (l if self.direction == i else 0) for i, x in enumerate(self.pos))
-            yield (x, y, z)
-
 
 class SandFall:
+    """Represents a sandfall as a collection of sand bricks.
+    It starts as a snapshot and gravity can be applied to make sand brick fall to the bottom.
+    It can be displayed.
+    """
 
     def __init__(self, bricks: Iterable[Brick]) -> None:
         self.bricks = sorted(bricks)
@@ -77,6 +87,8 @@ class SandFall:
         self._init_display()
 
     def _init_layers(self) -> None:
+        """Init layers representation: each height is mapped to
+        all the bricks that have a coordinate in that height."""
         self.layers = dict[int, list[Brick]]()
         # create a grid with a mapping on depth
         for brick in self.bricks:
@@ -97,6 +109,7 @@ class SandFall:
         plt.show(block=False)
 
     def apply_gravity(self, display_steps=True) -> int:
+        """Apply gravity to all the bricks."""
         brick_moved = 0
         for brick in self.bricks:
             if display_steps:
@@ -117,6 +130,7 @@ class SandFall:
         return brick_moved
 
     def make_brick_fall(self, brick: Brick) -> bool:
+        """Apply gravity to only one brick."""
         for z in range(brick.z, 0, -1):
             brick_under = next(filter(brick.is_brick_under, self.layers[z]), None)
             if brick_under is not None:
@@ -130,18 +144,22 @@ class SandFall:
         return True
 
     def remove_brick(self, brick: Brick, pos: Optional[Iterable[int]] = None):
+        """Remove a brick from the layers of the sandfall."""
         if pos is None:
             pos = brick.z_positions
         for z in pos:
             self.layers[z].remove(brick)
 
     def add_brick(self, brick: Brick, pos: Optional[Iterable[int]] = None):
+        """Add a brick to the layers of the sandfall."""
         if pos is None:
             pos = brick.z_positions
         for z in pos:
             self.layers[z].append(brick)
 
     def not_safe_desintegrate(self) -> Iterator[Brick]:
+        """Compute the bricks that are not safe to desintegrate
+        i.e. bricks which make other bricks fall when desintegrated."""
         not_safe = set[int]()
         for brick in self.bricks:
             if brick.z - 1 not in self.layers:
@@ -149,7 +167,7 @@ class SandFall:
             layer_under = self.layers[brick.z - 1]
             bricks_under = lfilter(brick.is_brick_under, layer_under)
             if len(bricks_under) == 0:
-                raise RuntimeError('A brick has not completly fallen', brick)
+                raise RuntimeError('A brick hasn\'t fallen over completely', brick)
             if len(bricks_under) == 1:
                 b = bricks_under[0]
                 if id(b) in not_safe:
@@ -161,6 +179,14 @@ class SandFall:
         self, level: int = 0,
         timeout: float = .1, size: int = 25, alpha: float = .9
     ) -> None:
+        """Update the sandfall view on the display.
+
+        Args:
+            level (int, optional): The level of the current view. Defaults to 0.
+            timeout (float, optional): The time between two displays. Defaults to .1.
+            size (int, optional): The size of the view. Defaults to 25.
+            alpha (float, optional): The alpha value for brick's color. Defaults to .9.
+        """
         if self.fig is None or self.ax is None:
             return  # no verbose
 
@@ -204,11 +230,10 @@ InputData = SandFall
 
 def get_data() -> InputData:
     """Retrieve all the data to begin with."""
-    l = lines_of_file(f"inputs/{DAY if not TEST else 'test'}.txt")
-    return SandFall(lmap(Brick.from_repr, l))
+    return SandFall(lmap(Brick.from_repr, lines_of_file("inputs/22.txt")))
 
 
-@section(day=DAY, part=1)
+@section(day=22, part=1)
 def part_1(sand_fall: InputData) -> int:
     """Code for section 1"""
     sand_fall.update_display(timeout=1)
@@ -218,10 +243,11 @@ def part_1(sand_fall: InputData) -> int:
     return len(sand_fall.bricks) - len(tuple(not_safe))
 
 
-@section(day=DAY, part=2)
+@section(day=22, part=2)
 def part_2(sand_fall: InputData) -> int:
     """Code for section 2"""
-    VERBOSE = False
+    # pylint: disable-next=unused-variable, redefined-outer-name
+    VERBOSE = False  # change verbose to avoid create figures while copying the sandfall
     sand_fall.apply_gravity(display_steps=False)
     not_safe = sorted(sand_fall.not_safe_desintegrate())
 
