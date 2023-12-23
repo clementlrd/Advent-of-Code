@@ -1,7 +1,8 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
-from typing import Iterator, Iterable
+from typing import Iterator, Iterable, Optional
 from dataclasses import dataclass, field
+from copy import deepcopy
 
 import matplotlib.pyplot as plt          # noqa
 from mpl_toolkits.mplot3d import Axes3D  # noqa
@@ -10,10 +11,11 @@ from numpy.random import sample
 
 from utils import lines_of_file, section, lmap, lfilter
 from utils_types import Coordinate3D, Coordinate
+from tqdm import tqdm
 
 DAY = 22
 TEST = False
-VERBOSE = True
+VERBOSE = False
 
 
 @dataclass
@@ -21,7 +23,7 @@ class Brick:
     direction: int
     length: int
     pos: Coordinate3D
-    color: np.ndarray = field(default_factory=lambda: sample(size=3))
+    color: tuple[float, ...] = field(default_factory=lambda: tuple(sample(size=3)))
     proj: set[Coordinate] = field(init=False)  # projection in (x,y) coordinates
 
     def __post_init__(self) -> None:
@@ -94,36 +96,50 @@ class SandFall:
         self.ax = self.fig.add_subplot(111, projection='3d')
         plt.show(block=False)
 
-    def apply_gravity(self, display_steps=True) -> None:
+    def apply_gravity(self, display_steps=True) -> int:
+        brick_moved = 0
         for brick in self.bricks:
             if display_steps:
                 self.update_display(brick.z)  # display
 
             before = set(brick.z_positions)   # keep track of previous depths
-            self.make_brick_fall(brick)       # update brick depth
+            if self.make_brick_fall(brick):   # update brick depth
+                brick_moved += 1
             after = set(brick.z_positions)    # new depths
 
             # update the layers of the game
-            for z in before - after:
-                if brick not in self.layers[z]:
-                    raise RuntimeError("Element doesn't exists", brick, z)
-                self.layers[z].remove(brick)
-            for z in after - before:
-                if brick in self.layers[z]:
-                    raise RuntimeError("Element already exists", brick, z)
-                self.layers[z].append(brick)
+            self.remove_brick(brick, pos=before - after)
+            self.add_brick(brick, pos=after - before)
 
         # update brick order
         self.bricks.sort()
 
-    def make_brick_fall(self, brick: Brick) -> None:
+        return brick_moved
+
+    def make_brick_fall(self, brick: Brick) -> bool:
         for z in range(brick.z, 0, -1):
             brick_under = next(filter(brick.is_brick_under, self.layers[z]), None)
             if brick_under is not None:
                 if z != brick.z - 1:
                     brick.pos = (*brick.pos[:-1], z + 1)
-                return
+                    return True
+                return False
+        if brick.z == 1:
+            return False
         brick.pos = (*brick.pos[:-1], 1)
+        return True
+
+    def remove_brick(self, brick: Brick, pos: Optional[Iterable[int]] = None):
+        if pos is None:
+            pos = brick.z_positions
+        for z in pos:
+            self.layers[z].remove(brick)
+
+    def add_brick(self, brick: Brick, pos: Optional[Iterable[int]] = None):
+        if pos is None:
+            pos = brick.z_positions
+        for z in pos:
+            self.layers[z].append(brick)
 
     def not_safe_desintegrate(self) -> Iterator[Brick]:
         not_safe = set[int]()
@@ -205,9 +221,19 @@ def part_1(sand_fall: InputData) -> int:
 @section(day=DAY, part=2)
 def part_2(sand_fall: InputData) -> int:
     """Code for section 2"""
-    return 0
+    VERBOSE = False
+    sand_fall.apply_gravity(display_steps=False)
+    not_safe = sorted(sand_fall.not_safe_desintegrate())
+
+    total = 0
+    for brick in tqdm(not_safe[::-1]):
+        test_sand_fall = deepcopy(sand_fall)
+        test_sand_fall.remove_brick(brick)
+        total += test_sand_fall.apply_gravity()
+
+    return total
 
 
 if __name__ == "__main__":
     part_1(get_data())  # P1: 407
-    part_2(get_data())  # P2:
+    part_2(get_data())  # P2: 59266
