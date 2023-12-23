@@ -3,7 +3,10 @@ from typing import Callable, Literal, Any, Optional, TextIO
 from collections.abc import Iterable, Iterator
 from itertools import chain
 from functools import reduce
+from pathlib import Path
 import time
+import requests
+
 from utils_types import T, S, Coordinate, Grid, Args
 
 #  ============================
@@ -13,11 +16,12 @@ from utils_types import T, S, Coordinate, Grid, Args
 #  ============================
 
 
-def section(day: int, part: int, sol: Optional[Any] = None):
+def section(year: int, day: int, part: int, sol: Optional[Any] = None):
     """Section decorator to handle result printing and time execution."""
     def decorator(part_fn: Callable):
         def wrapper(*args, **kwargs) -> None:
-            # TODO: load data with load function and give it to the function
+            data = load(year, day)
+
             t0 = time.time()
             result = part_fn(*args, **kwargs)
             execution_time = time.time() - t0
@@ -45,6 +49,24 @@ def print_answer(answer, day: int, part: int, print_fn=print) -> None:
     print(f"[DAY {day}] Answer to part {part} is:\n\n\t")
     print_fn(answer)
     print("\n", "=" * 50, sep="")
+
+
+def load_input(day, year, path: Optional[str] = None):
+    """Load """
+    path_name = path if path else f"./inputs/{day:02}.txt"
+    input_path = Path(path_name).resolve()
+    if not input_path.exists():
+        session = Path(".session").read_text(encoding='utf-8')
+        response = requests.get(
+            f"https://adventofcode.com/{year}/day/{day}/input",
+            headers={"User-Agent": "clem.laroudie@gmail.com"},
+            cookies={"session": session}, timeout=1
+        )
+        if response.status_code != 200:
+            raise requests.ConnectionError(response=response)
+        input_path.write_text(response.text, encoding='utf-8')
+
+    return lines_of_file(path_name)
 
 # ======
 #

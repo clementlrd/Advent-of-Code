@@ -1,2 +1,8 @@
-__pycache__
+# secret
+.session
+
+# IDE
 .vscode
+
+# python
+__pycache__
