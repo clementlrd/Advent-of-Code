@@ -1,8 +1,7 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
-from typing import Iterator
+from typing import Iterator, Iterable
 from dataclasses import dataclass, field
-from itertools import chain
 
 import matplotlib.pyplot as plt          # noqa
 from mpl_toolkits.mplot3d import Axes3D  # noqa
@@ -11,14 +10,10 @@ from numpy.random import sample
 
 from utils import lines_of_file, section, lmap, lfilter
 from utils_types import Coordinate3D, Coordinate
-from functools import reduce
 
 DAY = 22
 TEST = False
 VERBOSE = True
-
-alpha = .9
-speed = .1
 
 
 @dataclass
@@ -61,6 +56,8 @@ class Brick:
         return len(brick.proj & self.proj) > 0 and brick < self
 
     def __lt__(self, brick: Brick) -> bool:
+        if self.z == brick.z and self.direction == 2:
+            return self.length < brick.length
         return self.z < brick.z
 
     def __iter__(self) -> Iterator[Coordinate3D]:
@@ -69,135 +66,144 @@ class Brick:
             yield (x, y, z)
 
 
-def make_fall(brick_layers: dict[int, list[Brick]], brick: Brick) -> None:
-    for z in range(brick.z, 0, -1):
-        layer = brick_layers[z]
-        brick_under = next(filter(brick.is_brick_under, layer), None)
-        if brick_under is not None:
-            z = max(brick_under.z_positions)
-            if z != brick.z - 1:
-                brick.pos = (*brick.pos[:-1], z + 1)
+class SandFall:
+
+    def __init__(self, bricks: Iterable[Brick]) -> None:
+        self.bricks = sorted(bricks)
+        self.dim = (10, 10, self.bricks[-1].z)
+        self._init_layers()
+        self._init_display()
+
+    def _init_layers(self) -> None:
+        self.layers = dict[int, list[Brick]]()
+        # create a grid with a mapping on depth
+        for brick in self.bricks:
+            for z in brick.z_positions:
+                self.layers.setdefault(z, []).append(brick)
+
+        # create empty layers
+        for d in range(1, self.dim[-1]):
+            if d not in self.layers:
+                self.layers[d] = []
+
+    def _init_display(self) -> None:
+        if not VERBOSE:
+            self.fig, self.ax = None, None
             return
-    brick.pos = (*brick.pos[:-1], 1)
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111, projection='3d')
+        plt.show(block=False)
 
+    def apply_gravity(self, display_steps=True) -> None:
+        for brick in self.bricks:
+            if display_steps:
+                self.update_display(brick.z)  # display
 
-def plot_bricks(brick_layers: dict[int, list[Brick]], level: int, ax, size: int = 31):
-    if ax is None:
-        return
+            before = set(brick.z_positions)   # keep track of previous depths
+            self.make_brick_fall(brick)       # update brick depth
+            after = set(brick.z_positions)    # new depths
 
-    # Create axis
-    z_max = max(brick_layers.keys())
-    if z_max < size:
-        window_up = z_max - level
-        window_down = level - 1
-    else:
+            # update the layers of the game
+            for z in before - after:
+                if brick not in self.layers[z]:
+                    raise RuntimeError("Element doesn't exists", brick, z)
+                self.layers[z].remove(brick)
+            for z in after - before:
+                if brick in self.layers[z]:
+                    raise RuntimeError("Element already exists", brick, z)
+                self.layers[z].append(brick)
+
+        # update brick order
+        self.bricks.sort()
+
+    def make_brick_fall(self, brick: Brick) -> None:
+        for z in range(brick.z, 0, -1):
+            brick_under = next(filter(brick.is_brick_under, self.layers[z]), None)
+            if brick_under is not None:
+                if z != brick.z - 1:
+                    brick.pos = (*brick.pos[:-1], z + 1)
+                return
+        brick.pos = (*brick.pos[:-1], 1)
+
+    def not_safe_desintegrate(self) -> Iterator[Brick]:
+        not_safe = set[int]()
+        for brick in self.bricks:
+            if brick.z - 1 not in self.layers:
+                continue
+            layer_under = self.layers[brick.z - 1]
+            bricks_under = lfilter(brick.is_brick_under, layer_under)
+            if len(bricks_under) == 0:
+                raise RuntimeError('A brick has not completly fallen', brick)
+            if len(bricks_under) == 1:
+                b = bricks_under[0]
+                if id(b) in not_safe:
+                    continue  # already seen
+                not_safe.add(id(b))
+                yield b
+
+    def update_display(
+        self, level: int = 0,
+        timeout: float = .1, size: int = 25, alpha: float = .9
+    ) -> None:
+        if self.fig is None or self.ax is None:
+            return  # no verbose
+
+        # Create axis for the view
+        mx, my, mz = self.dim
         if level <= size // 2:
             window_down = level - 1
-            window_up = size - window_down - 1
-        elif level >= z_max - size // 2:
-            window_up = z_max - level
-            window_down = size - window_up - 1
+            window_up = size - window_down - 1 if mz >= size else mz - level
+        elif level >= mz - size // 2:
+            window_up = mz - level
+            window_down = size - window_up - 1 if mz >= size else level - 1
         else:
             window_down = size // 2
             window_up = size // 2
+        axes = [mx, my, window_down + window_up + 1]
+        z_min, z_max = level - window_down, level + window_up
 
-    z_min, z_max = level - window_down, level + window_up
+        # create data to plot
+        data, colors = np.zeros(axes), np.empty(axes + [4])
 
-    axes = [10, 10, window_down + window_up + 1]
+        for d in range(z_min, z_max + 1):
+            for brick in self.layers[d]:
+                for x, y, z in brick:
+                    if not z_min <= z <= z_max:
+                        continue
+                    data[x, y, z - z_min] = 1
+                    colors[x, y, z - z_min] = [*brick.color, alpha]
 
-    data = np.zeros(axes)
-    colors = np.empty(axes + [4])
-
-    for d in range(z_min, z_max + 1):
-        for brick in brick_layers[d]:
-            for x, y, z in brick:
-                if not (z_min <= z <= z_max):
-                    continue
-                data[x, y, z - z_min] = 1
-                colors[x, y, z - z_min] = [*brick.color, alpha]
-
-    # Plot figure
-    ax.cla()
-    ax.voxels(data, facecolors=colors, edgecolors='grey')
-    ax.set_box_aspect(axes)
-    for axis in [ax.xaxis, ax.yaxis, ax.zaxis]:
-        axis.set_ticklabels([])
-    ax.get_figure().canvas.draw_idle()
-    ax.get_figure().canvas.start_event_loop(speed)
+        # Plot on figure
+        self.ax.cla()
+        self.ax.voxels(data, facecolors=colors, edgecolors='grey')  # type:ignore
+        self.ax.set_box_aspect(axes)                                # type:ignore
+        for axis in [self.ax.xaxis, self.ax.yaxis, self.ax.zaxis]:  # type:ignore
+            axis.set_ticklabels([])
+        self.fig.canvas.draw_idle()
+        self.fig.canvas.start_event_loop(timeout)
 
 
-InputData = list[Brick]
+InputData = SandFall
 
 
 def get_data() -> InputData:
     """Retrieve all the data to begin with."""
     l = lines_of_file(f"inputs/{DAY if not TEST else 'test'}.txt")
-    return lmap(Brick.from_repr, l)
+    return SandFall(lmap(Brick.from_repr, l))
 
 
 @section(day=DAY, part=1)
-def part_1(bricks: InputData) -> int:
+def part_1(sand_fall: InputData) -> int:
     """Code for section 1"""
-    bricks = sorted(bricks)
-    game_layers = dict[int, list[Brick]]()
-    # create a grid with a mapping on depth
-    for brick in bricks:
-        for z in brick.z_positions:
-            game_layers.setdefault(z, []).append(brick)
-    # create empty layers
-    for d in range(1, max(game_layers.keys())):
-        if d not in game_layers:
-            game_layers[d] = []
-
-    for d, layer_bricks in game_layers.items():
-        if len(layer_bricks) != len(set(map(id, layer_bricks))):
-            raise RuntimeError(layer_bricks)
-        pos = list(reduce(chain, layer_bricks, []))
-        if len(set(pos)) != len(pos):
-            raise RuntimeError("two bricks are on the same position at depth", d)
-
-    if VERBOSE:
-        fig = plt.figure()
-        plt.show(block=False)
-        ax = fig.add_subplot(111, projection='3d')
-    else:
-        ax = None
-
-    for brick in bricks:
-        before = set(brick.z_positions)  # keep track of previous depths
-        make_fall(game_layers, brick)    # update brick depth
-        after = set(brick.z_positions)   # new depths
-
-        # update the layers of the game
-        for z in before - after:
-            if brick not in game_layers[z]:
-                raise RuntimeError("Element doesn't exists", brick, z)
-            game_layers[z].remove(brick)
-        for z in after - before:
-            if brick in game_layers[z]:
-                raise RuntimeError("Element already exists", brick, z)
-            game_layers[z].append(brick)
-
-    if VERBOSE:
-        plot_bricks(game_layers, 1, ax, size=4)
-        plt.pause(500)
-
-    not_safe = set[int]()
-    for brick in bricks:
-        if brick.z - 1 not in game_layers:
-            continue
-        layer_under = game_layers[brick.z - 1]
-        bricks_under = lfilter(brick.is_brick_under, layer_under)
-        if len(bricks_under) == 0:
-            raise RuntimeError('A brick has not completly fallen', brick)
-        if len(bricks_under) == 1:
-            not_safe.add(id(bricks_under[0]))
-
-    return len(bricks) - len(not_safe)
+    sand_fall.update_display(timeout=1)
+    sand_fall.apply_gravity()
+    sand_fall.update_display(timeout=1)
+    not_safe = sand_fall.not_safe_desintegrate()
+    return len(sand_fall.bricks) - len(tuple(not_safe))
 
 
 @section(day=DAY, part=2)
-def part_2(data: InputData) -> int:
+def part_2(sand_fall: InputData) -> int:
     """Code for section 2"""
     return 0
 
