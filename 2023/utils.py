@@ -4,7 +4,7 @@ from collections.abc import Iterable, Iterator
 from itertools import chain
 from functools import reduce
 import time
-from utils_types import T, S, Coordinate, Grid
+from utils_types import T, S, Coordinate, Grid, Args
 
 #  ============================
 #
@@ -13,13 +13,17 @@ from utils_types import T, S, Coordinate, Grid
 #  ============================
 
 
-def section(day: int, part: int):
+def section(day: int, part: int, sol: Optional[Any] = None):
     """Section decorator to handle result printing and time execution."""
     def decorator(part_fn: Callable):
         def wrapper(*args, **kwargs) -> None:
+            # TODO: load data with load function and give it to the function
             t0 = time.time()
             result = part_fn(*args, **kwargs)
             execution_time = time.time() - t0
+
+            if sol is not None:
+                assert result == sol
 
             def print_fn(x):
                 return print(x, f"\n\nExecution time: {execution_time:.5f}s", end="")
@@ -61,6 +65,14 @@ def lmap(fn: Callable[[T], S], iterable: Iterable[T]) -> list[S]:
 def lfilter(fn: Callable[[T], bool] | None, iterable: Iterable[T]) -> list[T]:
     """list of a map object. Shorthand."""
     return list(filter(fn, iterable))
+
+
+def starfilter(
+    fn: Callable[[*Args], bool],
+    iterable: Iterable[tuple[*Args]]
+) -> Iterator[tuple[*Args]]:
+    """filter for a function with multiple arguments."""
+    return filter(lambda x: fn(*x), iterable)
 
 
 def iter_split(char: str, iterable: Iterable[str]) -> Iterable[list[str]]:
