@@ -15,4 +15,5 @@
 13. **[Point of Incidence:](https://adventofcode.com/2023/day/13)** Find reflections in mirrors. There can be a smudge making the two non-symmetrical.
 14. **[Parabolic Reflector Dish:](https://adventofcode.com/2023/day/14)** Move round rocks with gravity and cyclic rotations.
 15. **[Lens Library:](https://adventofcode.com/2023/day/15)** Hashmap analogy with boxes of lens.
-24. **[Never Tell Me The Odds:](https://adventofcode.com/2023/day/24)** Find if the path of two hailstones intersect and find a path that will collide to all the HailStones.
+24. **[Never Tell Me The Odds:](https://adventofcode.com/2023/day/24)** Find if the path of two hailstones intersect and find a path that will collide to all the HailStones. I use chinese reminder theorem for the last part to solve the equations.
+25. **[Snowverload:](https://adventofcode.com/2023/day/24)** Find 3 edges that cut a graph into 2 distinct components.
