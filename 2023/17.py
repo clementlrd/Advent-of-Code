@@ -1,118 +1,114 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
+from typing import Callable, Iterator
 from queue import PriorityQueue
 from utils import lines_of_file, section, grid_map, lmap
 from utils_types import Grid, Coordinate
 
 DAY = 17
-TEST = False
-VERBOSE = False
+TEST = True
+VERBOSE = True
 
 InputData = Grid[int]
 
 directions = {'<': (0, -1), '>': (0, 1), '^': (-1, 0), 'v': (1, 0)}
 opposite = {'<': '>', '>': '<', '^': 'v', 'v': '^'}
 
-# cost, pos, dir, inertia
-SearchNode = tuple[int, Coordinate, str | None, int, str]
+
+def neighbors(grid: Grid[int], node: Node) -> Iterator[Node]:
+    (i, j), dirs = node
+    for new_d, (di, dj) in directions.items():
+        ni, nj = i + di, j + dj
+        if not (0 <= ni < len(grid) and 0 <= nj < len(grid[0])):
+            continue   # outside grid
+
+        if dirs and new_d == dirs[-1]:
+            new_dirs = dirs + new_d
+        else:
+            new_dirs = new_d
+
+        yield ((ni, nj), new_dirs)
 
 
-def Astar(grid: Grid[int], start: Coordinate = (0, 0)) -> int:
-    """Performs A* search on the grid"""
-    n, m = len(grid), len(grid[0])
-    end = (n - 1, m - 1)
-    L: PriorityQueue[SearchNode] = PriorityQueue()       # Fringe
-    L.put((grid[start[0]][start[1]], start, None, 0, ""))
-    seen: set[tuple[Coordinate, str | None, int]] = set()
-
-    while not L.empty():
-        cost, (i, j), d, inertia, acc = L.get()        # Select a state
-        if (i, j) == end:   # Return on final state
-            print(acc)
-            return cost
-
-        if d is not None and ((i, j), d, inertia) in seen:
-            continue
-        seen.add(((i, j), d, inertia))
-
-        for new_d, (di, dj) in directions.items():
-            ni, nj = i + di, j + dj
-            if not (0 <= ni < n and 0 <= nj < m):
-                continue   # outside grid
-            if d is not None and new_d == opposite[d]:
-                continue   # don't go back
-            new_inertia = 1
-            if d is not None and new_d == d:
-                if inertia >= 3:
-                    continue   # maximum inertia
-                new_inertia = inertia + 1
-            new_cost = cost + grid[ni][nj]
-
-            if ((ni, nj), new_d, new_inertia) in seen:
-                continue   # node already seen with a better cost
-            L.put((new_cost, (ni, nj), new_d, new_inertia, acc + new_d))
-    raise RuntimeError("No final State found")
+Node = tuple[Coordinate, str]  # coordinate / direction with inertia
+SearchNode = tuple[int, *Node, str]  # cost / node / path
 
 
-def Astar2(grid: Grid[int], start: Coordinate = (0, 0)) -> int:
-    """Performs A* search on the grid"""
-    n, m = len(grid), len(grid[0])
-    L: PriorityQueue[SearchNode] = PriorityQueue()       # Fringe
-    L.put((grid[start[0]][start[1]], start, None, 0, ""))
-    seen: set[tuple[Coordinate, str | None, int]] = set()
+def uniformCostSearch(
+    grid: Grid[int],
+    is_terminal: Callable[[Node], bool],
+    is_valid: Callable[[Node, Node], bool],
+    start: Coordinate = (0, 0)
+) -> tuple[int, Coordinate, str, str]:
+    """Performs uniform cost search on the grid to find the path with lower cost."""
+    L = PriorityQueue[SearchNode]()
+    L.put((0, start, '', ''))
+    seen = set[Node]()
 
     while not L.empty():
-        cost, (i, j), d, inertia, acc = L.get()        # Select a state
-        if (i, j) == (n - 5, m - 1):   # Return on final state
-            print(acc)
-            return cost + sum((grid[ii][m - 1] for ii in range(n - 4, n)))
-        if (i, j) == (n - 1, m - 5):   # Return on final state
-            print(acc)
-            return cost + sum((grid[n - 1][jj] for jj in range(m - 4, m)))
+        cost, pos, direction, path = L.get()  # select a state
+        node: Node = pos, direction
 
-        if d is not None and ((i, j), d, inertia) in seen:
+        if is_terminal(node):          # Return on final state
+            return cost, pos, direction, path
+
+        if node in seen:
             continue
-        seen.add(((i, j), d, inertia))
+        seen.add(node)
 
-        for new_d, (di, dj) in directions.items():
-            ni, nj = i + di, j + dj
-            if not (0 <= ni < n and 0 <= nj < m):
-                continue   # outside grid
-            if d is not None and new_d == opposite[d]:
-                continue   # don't go back
-            new_inertia = 1
-            if d is not None and new_d != d:
-                if inertia < 4:
-                    continue
-            if d is not None and new_d == d:
-                if inertia >= 10:
-                    continue   # maximum inertia
-                new_inertia = inertia + 1
-            new_cost = cost + grid[ni][nj]
-            if ((ni, nj), new_d, new_inertia) in seen:
-                continue   # node already seen with a better cost
-            L.put((new_cost, (ni, nj), new_d, new_inertia, acc + new_d))
+        for new_node in neighbors(grid, node):
+            if is_valid(node, new_node) and new_node not in seen:
+                (i, j), dirs = new_node
+                L.put((cost + grid[i][j], (i, j), dirs, path + dirs[-1]))
     raise RuntimeError("No final State found")
 
 
 def get_data() -> InputData:
     """Retrieve all the data to begin with."""
     grid = lmap(list, lines_of_file("inputs/17.txt"))  # convert to grid
-    grid = grid_map(int, grid)                         # convert grid from str to int
-    grid[0][0] = 0                                     # the starting position has no cost
-    return grid
+    return grid_map(int, grid)                         # convert grid from str to int
 
 
 @section(day=DAY, part=1)
 def part_1(data: InputData) -> int:
     """Code for section 1"""
-    return Astar(data)
+
+    def is_terminal(node: Node) -> bool:
+        return node[0] == (len(data) - 1, len(data[0]) - 1)
+
+    def is_valid(node: Node, new_node: Node) -> bool:
+        (_, dirs), (_, new_dirs) = node, new_node
+        # don't go back and maximum inertia
+        return not dirs or new_dirs[-1] != opposite[dirs[-1]] and len(new_dirs) <= 3
+
+    return uniformCostSearch(data, is_terminal, is_valid)[0]
 
 
 @section(day=DAY, part=2)
-def part_2(data: InputData) -> int:
+def part_2(grid: InputData) -> int:
     """Code for section 2"""
-    return Astar2(data)
+    def is_terminal(node: Node) -> bool:
+        pos, dirs, n, m = *node, len(grid), len(grid[0])
+        fstate1 = pos == (n - 5, m - 1) and ('v' not in dirs or len(dirs) <= 6)
+        fstate2 = pos == (n - 1, m - 5) and ('>' not in dirs or len(dirs) <= 6)
+        return fstate1 or fstate2
+
+    def is_valid(node: Node, new_node: Node) -> bool:
+        (_, dirs), (_, new_dirs) = node, new_node
+        # don't go back and maximum inertia
+        not_go_back = not dirs or new_dirs[-1] != opposite[dirs[-1]]
+        min_inertia = len(dirs) >= 4 or dirs in new_dirs
+        max_inertia = len(new_dirs) <= 10
+        return not dirs or not_go_back and min_inertia and max_inertia
+
+    n, m = len(grid), len(grid[0])
+    cost, pos, _, _ = uniformCostSearch(grid, is_terminal, is_valid)
+
+    if pos == (n - 5, m - 1):
+        return cost + sum(grid[i][m - 1] for i in range(n - 4, n))
+    if pos == (n - 1, m - 5):
+        return cost + sum(grid[n - 1][j] for j in range(m - 4, m))
+    raise ValueError('Wrong end state', pos, cost)
 
 
 if __name__ == "__main__":
