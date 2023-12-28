@@ -2,9 +2,7 @@
 from typing import Callable, Iterator
 from functools import partial
 import re
-from utils import lines_of_file, section, lfilter, compose
-
-InputData = Iterator[str]
+from utils import section, lfilter, compose
 
 str_digits = {
     'one': '1',
@@ -39,19 +37,14 @@ def token_to_digit_fn(token_value: str) -> Callable[[str], str]:
     return lambda s: re.sub(f'<{token_value}>', str_digits[token_value], s)
 
 
-def get_data() -> InputData:
-    """Retrieve all the data to begin with."""
-    return lines_of_file("inputs/1.txt")
-
-
-@section(day=1, part=1)
-def part_1(data: InputData) -> int:
+@section(year=2023, day=1, part=1, sol=55208)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
     return sum(map(calibration_value, data))
 
 
-@section(day=1, part=2)
-def part_2(data: InputData) -> int:
+@section(year=2023, day=1, part=2, sol=54578)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
     l = list(data)   # convert to list to use the iterator twice
 
@@ -76,5 +69,6 @@ def part_2(data: InputData) -> int:
 
 
 if __name__ == "__main__":
-    part_1(get_data())  # P1: 55208
-    part_2(get_data())  # P2: 54578
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

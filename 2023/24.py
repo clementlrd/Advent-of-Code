@@ -8,11 +8,8 @@ from collections import Counter, defaultdict
 from operator import and_, mul
 import math
 
-from utils import lines_of_file, section, lmap
+from utils import section, lmap
 from utils_types import Coordinate3D, Coordinate
-
-DAY = 24
-TEST = False
 
 
 @dataclass(slots=True, frozen=True)
@@ -177,32 +174,26 @@ def resolve_coordinate(hailstones: list[HailStone], dim: int) -> int:
     raise ValueError('No solutions found to the system')
 
 
-InputData = list[HailStone]
-
-
-def get_data() -> InputData:
-    """Retrieve all the data to begin with."""
-    l = lines_of_file(f"inputs/{DAY if not TEST else 'test'}.txt")
-    return lmap(HailStone.from_repr, l)
-
-
-@section(day=DAY, part=1, sol=11098)
-def part_1(data: InputData) -> int:
+@section(year=2023, day=24, part=1, sol=11098)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
+    hailstones = lmap(HailStone.from_repr, data)
     intersect = partial(HailStone.intersect2D, zone=(int(2e14), int(4e14)))
-    return sum(starmap(intersect, combinations(data, 2)))
+    return sum(starmap(intersect, combinations(hailstones, 2)))
 
 
-@section(day=DAY, part=2, sol=920630818300104)
-def part_2(data: InputData) -> int:
+@section(year=2023, day=24, part=2, sol=920630818300104)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2
 
     Reference:
         - https://github.com/edoannunziata/jardin/blob/master/aoc23/AdventOfCode23.ipynb
     """
-    return sum((resolve_coordinate(data, i) for i in range(3)))
+    hailstones = lmap(HailStone.from_repr, data)
+    return sum((resolve_coordinate(hailstones, i) for i in range(3)))
 
 
 if __name__ == "__main__":
-    part_1(get_data())
-    part_2(get_data())
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

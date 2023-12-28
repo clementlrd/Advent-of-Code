@@ -16,25 +16,55 @@ from utils_types import T, S, Coordinate, Grid, Args
 #  ============================
 
 
-def section(year: int, day: int, part: int, sol: Optional[Any] = None):
-    """Section decorator to handle result printing and time execution."""
+def section(year: int, day: int, part: int, sol: Optional[Any] = None, path: Optional[str] = None):
+    """Section decorator to handle result printing and time execution.
+    `Year`, `day` and `part` (section) has to be given to load and print data accordingly.
+    A path can be given to load another file instead.
+    A solution can also be mentionned to verify the output of the function.
+    """
     def decorator(part_fn: Callable):
-        def wrapper(*args, **kwargs) -> None:
-            data = load(year, day)
+        def wrapper(*args) -> None:
+            # automaticly load data as a list of rows
+            data = load_input(year, day, path=path)
 
+            # execute section with time recording
             t0 = time.time()
-            result = part_fn(*args, **kwargs)
+            result = part_fn(args[0] if args else data)
             execution_time = time.time() - t0
 
-            if sol is not None:
-                assert result == sol
+            # check the result if a solution is given
+            if sol is not None and result != sol:
+                raise ValueError("The result of the function is not the result awaited."
+                                 f"The function returned {result} instead of {sol}")
 
+            # print answer in the console
             def print_fn(x):
                 return print(x, f"\n\nExecution time: {execution_time:.5f}s", end="")
             print_answer(result, day=day, part=part, print_fn=print_fn)
 
         return wrapper
     return decorator
+
+
+def load_input(year, day, path: Optional[str] = None):
+    """Load the data of the day by requesting input from advent of code of the file doesn't exists.
+    A session cookie has to be saved in a file '.session' for this function to work.
+    If a path is given, the function will try to load this file instead.
+    """
+    path_name = path if path else f"./inputs/{day}.txt"
+    input_path = Path(path_name).resolve()
+    if not input_path.exists() and path is None:
+        session = Path(".session").read_text(encoding='utf-8')
+        response = requests.get(
+            f"https://adventofcode.com/{year}/day/{day}/input",
+            headers={"User-Agent": "clem.laroudie@gmail.com"},
+            cookies={"session": session}, timeout=1
+        )
+        if response.status_code != 200:
+            raise requests.ConnectionError(response=response)
+        input_path.write_text(response.text, encoding='utf-8')
+
+    return lines_of_file(path_name)
 
 
 def lines_of_file(path: str) -> Iterator[str]:
@@ -49,24 +79,6 @@ def print_answer(answer, day: int, part: int, print_fn=print) -> None:
     print(f"[DAY {day}] Answer to part {part} is:\n\n\t")
     print_fn(answer)
     print("\n", "=" * 50, sep="")
-
-
-def load_input(day, year, path: Optional[str] = None):
-    """Load """
-    path_name = path if path else f"./inputs/{day:02}.txt"
-    input_path = Path(path_name).resolve()
-    if not input_path.exists():
-        session = Path(".session").read_text(encoding='utf-8')
-        response = requests.get(
-            f"https://adventofcode.com/{year}/day/{day}/input",
-            headers={"User-Agent": "clem.laroudie@gmail.com"},
-            cookies={"session": session}, timeout=1
-        )
-        if response.status_code != 200:
-            raise requests.ConnectionError(response=response)
-        input_path.write_text(response.text, encoding='utf-8')
-
-    return lines_of_file(path_name)
 
 # ======
 #
