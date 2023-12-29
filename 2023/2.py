@@ -1,97 +1,94 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
-from typing import Iterable, Any
-import os
-from utils import reduce, lines_of_file
+from __future__ import annotations
+from typing import Iterable, Optional
+from functools import reduce
+from dataclasses import dataclass, field
+from operator import mul
 
-DATA_PATH = "inputs/"
-DAY = os.path.basename(__file__).split(".")[0]
-
-Set = tuple[int, int, int]
-Game = list[Set]
+from utils import section, lmap
 
 
-max_number_per_color = 12, 13, 14
+@dataclass
+class Set:
+    """A set is a number of cube of each color retrieved from the bag once."""
+    red: int = field(default=0)
+    blue: int = field(default=0)
+    green: int = field(default=0)
+
+    @property
+    def power(self) -> int:
+        """Compute the power metric of the set."""
+        return reduce(mul, self.__dict__.values())
+
+    def is_valid(self, max_set: Set) -> bool:
+        """Check whether the set is valid."""
+        return all((
+            getattr(self, color) <= getattr(max_set, color)
+            for color in ('red', 'blue', 'green')
+        ))
+
+    @classmethod
+    def from_repr(cls, _repr: str) -> Set:
+        """Create Set from string representation.
+        The string representation can have duplicates or no value defined."""
+        s = cls()
+        for cube_color in _repr.split(", "):
+            nbr, color = cube_color.split(" ")
+            setattr(s, color, int(nbr))
+        return s
+
+    @classmethod
+    def max(cls, s1: Set, s2: Set) -> Set:
+        """Create a set that corresponds to the max af each color"""
+        return cls(**{
+            color: max(getattr(s1, color), getattr(s2, color))
+            for color in ('red', 'blue', 'green')
+        })
 
 
-def format_set(s: str) -> Set:
-    """Return a tuple of int in format (R, G, B) representing
-    the number of cubes retrieved from the bag once, during a game."""
-    colors: dict[str, int] = {"red": 0, "green": 0, "blue": 0}
-    for cube_color in s.split(", "):
-        nbr, color = cube_color.split(" ")
-        colors[color] = int(nbr)
-    return (colors["red"], colors["green"], colors["blue"])
+@dataclass
+class Game:
+    """A game is a list of sets."""
+    id: int
+    sets: list[Set]
+
+    def is_valid(self, max_set: Optional[Set] = None) -> bool:
+        """Check whether the game is valid. A valid game is a game that as all its sets valid."""
+        if max_set is None:
+            max_set = Set(12, 13, 14)
+        return all(s.is_valid(max_set) for s in self.sets)
+
+    def reduced(self) -> Set:
+        """Create a set that correspond to the set of the minimum cubes required.
+        It's the maximum number of a ball color on a game."""
+        return reduce(Set.max, self.sets)
+
+    @classmethod
+    def from_repr(cls, _repr: str) -> Game:
+        """Create a game from its representation. The format is `Game x: [set list]`."""
+        info, sets = _repr.split(": ")
+        game_id = int(info.split(" ")[-1])
+        sets = lmap(Set.from_repr, sets.split('; '))
+        return cls(game_id, sets)
 
 
-def get_data() -> Iterable[tuple[int, Game]]:
-    """Retrieve all the data to begin with."""
-    l = lines_of_file(f"{DATA_PATH}{DAY}.txt")
-    l = map(lambda s: s.split(": ")[-1], l)         # retrieve all the sets as a string
-    l = map(lambda s: s.split("; "), l)             # split all the sets
-    l = map(lambda g: list(map(format_set, g)), l)  # format the sets as a tuple (R,G,B)
-    # add the id along with the game
-    return map(lambda idg: (idg[0] + 1, idg[1]), enumerate(l))
-
-
-def is_valid_game(game: Game) -> bool:
-    """Check if a game has a valid number of cubes retrieved."""
-    return all(
-        # the number of cubes is smaller than the max for this color
-        n <= M
-        for cube_set in game
-        for n, M in zip(cube_set, max_number_per_color)
-    )
-
-
-def valid_game_id(game_with_id: tuple[int, Game]) -> int:
-    """Return game id if the game is valid. Otherwise return 0."""
-    id, game = game_with_id
-    return id if is_valid_game(game) else 0
-
-
-def part_1() -> None:
+@section(year=2023, day=2, part=1, sol=2679)
+def part_1(data: Iterable[str]) -> int:
     """Code for section 1"""
-    l = get_data()
-    s = sum(map(valid_game_id, l))  # sum valid IDs
-
-    print_answer(s, part=1)
-
-
-def reduce_game(game_with_id: tuple[int, Game]) -> Set:
-    """Reduce a game to the set of the minimum cubes required.
-    It's the maximum number of a ball color on a game."""
-    return reduce(
-        lambda fs, s: (
-            max(fs[0], s[0]),  # type: ignore
-            max(fs[1], s[1]),  # type: ignore
-            max(fs[2], s[2])   # type: ignore
-        ),
-        game_with_id[1], (0, 0, 0)
-    )
+    games = map(Game.from_repr, data)
+    valid_games = filter(Game.is_valid, games)
+    return sum(g.id for g in valid_games)  # sum valid IDs
 
 
-def set_power(s: Set):
-    """Return the power value of a set."""
-    return s[0] * s[1] * s[2]
-
-
-def part_2() -> None:
+@section(year=2023, day=2, part=2, sol=77607)
+def part_2(data: Iterable[str]) -> int:
     """Code for section 2"""
-    l = get_data()
-    l = map(reduce_game, l)
-    power = sum(map(set_power, l), start=0)
-
-    print_answer(power, part=2)
-
-
-def print_answer(answer: Any, part: int, print_fn=print) -> None:
-    """Shorthand to print answer."""
-    print("=" * 50)
-    print(f"[DAY {DAY}] Answer to part {part} is:\n\n\t")
-    print_fn(answer)
-    print("\n", "=" * 50, sep="")
+    games = map(Game.from_repr, data)
+    sets = map(Game.reduced, games)
+    return sum(s.power for s in sets)
 
 
 if __name__ == "__main__":
-    part_1()  # 2679
-    part_2()  # 77607
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()
