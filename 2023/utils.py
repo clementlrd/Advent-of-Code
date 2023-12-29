@@ -16,7 +16,11 @@ from utils_types import T, S, Coordinate, Grid, Args
 #  ============================
 
 
-def section(year: int, day: int, part: int, sol: Optional[Any] = None, path: Optional[str] = None):
+def section(
+        year: int, day: int, part: int,
+        path: Optional[str] = None, test: bool = False,
+        sol: Optional[Any] = None
+):
     """Section decorator to handle result printing and time execution.
     `Year`, `day` and `part` (section) has to be given to load and print data accordingly.
     A path can be given to load another file instead.
@@ -25,7 +29,7 @@ def section(year: int, day: int, part: int, sol: Optional[Any] = None, path: Opt
     def decorator(part_fn: Callable):
         def wrapper(*args) -> None:
             # automaticly load data as a list of rows
-            data = load_input(year, day, path=path)
+            data = load_input(year, day, path=f'{year}/inputs/test.txt' if test else path)
 
             # execute section with time recording
             t0 = time.time()
