@@ -1,13 +1,12 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
+from typing import Iterator
 import re
 from itertools import pairwise, starmap
 from collections import Counter
-from utils import lines_of_file, section
+from utils import section
 from utils import lmap, transpose, rotate90, compose
 from utils_types import Grid
-
-InputData = Grid[str]
 
 
 def tilt_north(grid: Grid[str]) -> Grid[str]:
@@ -46,20 +45,17 @@ def total_load(grid: Grid[str]) -> int:
     return sum(starmap(row_load, enumerate(grid)))
 
 
-def get_data() -> InputData:
-    """Retrieve all the data to begin with."""
-    return lmap(list, lines_of_file("inputs/14.txt"))
-
-
-@section(day=14, part=1)
-def part_1(data: InputData) -> int:
+@section(year=2023, day=14, part=1, sol=105208)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
-    return compose(total_load, tilt_north)(data)
+    grid = lmap(list, data)
+    return compose(total_load, tilt_north)(grid)
 
 
-@section(day=14, part=2)
-def part_2(data: InputData) -> int:
+@section(year=2023, day=14, part=2, sol=102943)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
+    grid = lmap(list, data)
     remaining_steps = 1_000_000_000
 
     # use regex to find a repeting sequence at the end
@@ -68,8 +64,8 @@ def part_2(data: InputData) -> int:
     regex_window = 100
     loads, cycle = [], -1
     for i in range(remaining_steps):
-        data = tilt_cycle(data)
-        loads.append(total_load(data))
+        grid = tilt_cycle(grid)
+        loads.append(total_load(grid))
         if i % 100 == 0:
             # look for a repeting sequence every 100 steps
             match = regex.search(" ".join(map(str, loads[-regex_window:])))
@@ -82,9 +78,10 @@ def part_2(data: InputData) -> int:
     # execute remaining steps (cutoff cycles with modulo)
     ex_remaining_cycles = compose(tilt_cycle, repeat=remaining_steps % cycle)
 
-    return compose(total_load, ex_remaining_cycles)(data)
+    return compose(total_load, ex_remaining_cycles)(grid)
 
 
 if __name__ == "__main__":
-    part_1(get_data())  # P1: 105208
-    part_2(get_data())  # P2: 102943
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

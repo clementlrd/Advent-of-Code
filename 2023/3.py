@@ -1,24 +1,17 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
-from typing import Iterable, Any
-import os
-from utils import lines_of_file, neighborhood
+from typing import Iterator
+from utils import section, neighborhood
 
-DATA_PATH = "inputs/"
-DAY = os.path.basename(__file__).split(".")[0]
+# TODO: refactor
 
 
-def get_data() -> Iterable[str]:
-    """Retrieve all the data to begin with."""
-    l = lines_of_file(f"{DATA_PATH}{DAY}.txt")
-    return l
-
-
-def part_1() -> None:
+@section(year=2023, day=3, part=1, sol=514969)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
-    l = list(get_data())
+    grid = list(data)
     part_numbers = []
 
-    for i, row in enumerate(l):
+    for i, row in enumerate(grid):
         current_number, is_part_number = "", False
         for j, c in enumerate(row):
             if not '0' <= c <= '9':
@@ -31,8 +24,8 @@ def part_1() -> None:
 
             # we are in a number. keeping track of it
             current_number += c
-            for vi, vj in neighborhood((i, j), mat_size=(len(l), len(row)), connectivity=8):
-                neighbor = l[vi][vj]
+            for vi, vj in neighborhood((i, j), mat_size=(len(grid), len(row)), connectivity=8):
+                neighbor = grid[vi][vj]
                 if '0' <= neighbor <= '9' or neighbor == '.':
                     # empty space or number, nothing to see here
                     continue
@@ -43,18 +36,19 @@ def part_1() -> None:
         if is_part_number and current_number:
             part_numbers.append(int(current_number))
 
-    print_answer(sum(part_numbers), part=1)
+    return sum(part_numbers)
 
 
-def part_2() -> None:
+@section(year=2023, day=3, part=2, sol=78915902)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
-    l = list(get_data())
+    grid = list(data)
 
     part_numbers = []
     # keep track of the parts numbers linked to a gear
     gears_linked = {}
 
-    for i, row in enumerate(l):
+    for i, row in enumerate(grid):
         current_number, is_part_number, gear = "", False, None
         for j, c in enumerate(row):
             if not '0' <= c <= '9':
@@ -67,8 +61,8 @@ def part_2() -> None:
                 continue
 
             current_number += c
-            for vi, vj in neighborhood((i, j), mat_size=(len(l), len(row)), connectivity=8):
-                neighbor = l[vi][vj]
+            for vi, vj in neighborhood((i, j), mat_size=(len(grid), len(row)), connectivity=8):
+                neighbor = grid[vi][vj]
                 if neighbor == "*":
                     # we found a gear
                     gear = (vi, vj)
@@ -87,17 +81,10 @@ def part_2() -> None:
     l = filter(lambda x: len(x) == 2, gears_linked.values())
     # gear ration is a multiplication of the two part numbers
     l = map(lambda x: x[0] * x[1], l)
-    print_answer(sum(l), part=2)
-
-
-def print_answer(answer: Any, part, print_fn=print) -> None:
-    """Shorthand to print answer."""
-    print("=" * 50)
-    print(f"[DAY {DAY}] Answer to part {part} is:\n\n\t")
-    print_fn(answer)
-    print("\n", "=" * 50, sep="")
+    return sum(l)
 
 
 if __name__ == "__main__":
-    part_1()  # 514969
-    part_2()  # 78915902
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

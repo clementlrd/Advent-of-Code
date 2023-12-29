@@ -2,14 +2,13 @@
 from __future__ import annotations
 from typing import Callable, Iterator, TypeVar, Generic
 from dataclasses import dataclass
-from utils import lines_of_file, section, lmap
 from copy import deepcopy
 import operator
 from queue import LifoQueue
 from functools import reduce
 
-DAY = 19
-TEST = False
+from utils import section, lmap
+
 operators = {'<': operator.lt, '>': operator.gt}
 variables = ('x', 'm', 'a', 's')
 
@@ -99,27 +98,22 @@ class Workflow:
         yield rpart, self.final
 
 
-InputData = tuple[dict[str, Workflow], list[Part[int]]]
-
-
-def get_data() -> InputData:
-    """Retrieve all the data to begin with."""
-    l = lines_of_file(f"inputs/{DAY if not TEST else 'test'}.txt")
+def create_workflows(data: Iterator[str]) -> dict[str, Workflow]:
+    """Consume data iterator to create workflows until there is an empty line."""
     workflows = {}
-    for row in l:
+    for row in data:
         if not row:
             break
         name, rules = row.split('{')
         rules = rules[:-1].split(',')
         workflows[name] = Workflow(lmap(Rule.from_repr, rules[:-1]), final=rules[-1])
+    return workflows
 
-    return (workflows, lmap(Part.from_json, l))
 
-
-@section(day=DAY, part=1)
-def part_1(data: InputData) -> int:
+@section(year=2023, day=19, part=1, sol=263678)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
-    workflows, parts = data
+    workflows, parts = create_workflows(data), lmap(Part.from_json, data)
 
     total = 0
     for part in parts:
@@ -131,10 +125,10 @@ def part_1(data: InputData) -> int:
     return total
 
 
-@section(day=DAY, part=2)
-def part_2(data: InputData) -> int:
+@section(year=2023, day=19, part=2, sol=125455345557345)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
-    workflows, _ = data
+    workflows = create_workflows(data)
     range_part = Part(**{n: Range(1, 4000) for n in variables})
 
     accepted = list[Part[Range]]()
@@ -153,5 +147,6 @@ def part_2(data: InputData) -> int:
 
 
 if __name__ == "__main__":
-    part_1(get_data())  # P1: 263678
-    part_2(get_data())  # P2: 125455345557345
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

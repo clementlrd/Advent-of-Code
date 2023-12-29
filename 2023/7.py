@@ -1,20 +1,11 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
-from typing import Iterable, Any, Protocol, Self
-from itertools import starmap
+from typing import Iterable, Iterator, Protocol, Self
 from collections import Counter
 from enum import Enum
 from dataclasses import dataclass, field
-import os
-from utils import lines_of_file, lmap
+from utils import section, lmap
 
-DATA_PATH = "inputs/"
-DAY = os.path.basename(__file__).split(".")[0]
-
-
-#
-#  Objects
-#
 
 class Rule(Protocol):
     """A rule is applied to an Hand"""
@@ -116,9 +107,10 @@ class Hand:
             assert ValueError("Hand Equality")
         return self.hand_type.value < other.hand_type.value
 
-    @staticmethod
-    def from_str(cards: str, bid: str) -> Hand:
+    @classmethod
+    def from_repr(cls, _repr: str) -> Hand:
         """Create a Hand given its card string"""
+        cards, bid = _repr.split(' ')
         return Hand(desc=cards, bid=int(bid))
 
 
@@ -126,44 +118,28 @@ def total_winnings(hands: Iterable[Hand]) -> int:
     """Compute the total winning: the rank times the bid added for each hand"""
     return sum((i + 1) * hand.bid for i, hand in enumerate(hands))
 
-#
-#  main section
-#
 
-
-def get_data() -> Iterable[Hand]:
-    """Retrieve all the data to begin with."""
-    l = lines_of_file(f"{DATA_PATH}{DAY}.txt")
-    l = map(lambda r: r.split(" "), l)  # split cards and bid
-    return starmap(Hand.from_str, l)    # create Hand
-
-
-def part_1() -> None:
+@section(year=2023, day=7, part=1, sol=251121738)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
-    l = get_data()
-    l = map(lambda h: h.set_rule(Rule1), l)  # set rule for hands
-    l = sorted(l)                            # sort hands
+    hands = map(Hand.from_repr, data)
+    hands = map(lambda h: h.set_rule(Rule1), hands)  # set rule for hands
+    hands = sorted(hands)                            # sort hands
 
-    print_answer(total_winnings(l), part=1)
+    return total_winnings(hands)
 
 
-def part_2() -> None:
+@section(year=2023, day=7, part=2, sol=251421071)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
-    l = get_data()
-    l = map(lambda h: h.set_rule(Rule2), l)  # set rule for hand
-    l = sorted(l)                            # sort hands
+    hands = map(Hand.from_repr, data)
+    hands = map(lambda h: h.set_rule(Rule2), hands)  # set rule for hand
+    hands = sorted(hands)                            # sort hands
 
-    print_answer(total_winnings(l), part=2)
-
-
-def print_answer(answer: Any, part, print_fn=print) -> None:
-    """Shorthand to print answer."""
-    print("=" * 50)
-    print(f"[DAY {DAY}] Answer to part {part} is:\n\n\t")
-    print_fn(answer)
-    print("\n", "=" * 50, sep="")
+    return total_winnings(hands)
 
 
 if __name__ == "__main__":
-    part_1()  # P1: 251121738
-    part_2()  # p2: 251421071
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

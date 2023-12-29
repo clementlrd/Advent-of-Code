@@ -11,7 +11,7 @@ import numpy as np
 from numpy.random import sample
 from tqdm import tqdm
 
-from utils import lines_of_file, section, lmap, lfilter
+from utils import section, lmap, lfilter
 from utils_types import Coordinate3D, Coordinate
 
 VERBOSE = False
@@ -36,7 +36,7 @@ class Brick:
 
     @property
     def z_positions(self) -> Iterator[int]:
-        """Sharthand to access all the z coordinates occupied by the brick."""
+        """Shorthand to access all the z coordinates occupied by the brick."""
         if self.direction == 2:
             for l in range(self.length if self.direction == 2 else 1):
                 yield self.z + l
@@ -168,10 +168,7 @@ class SandFall:
             bricks_under = lfilter(brick.is_brick_under, layer_under)
             if len(bricks_under) == 0:
                 raise RuntimeError('A brick hasn\'t fallen over completely', brick)
-            if len(bricks_under) == 1:
-                b = bricks_under[0]
-                if id(b) in not_safe:
-                    continue  # already seen
+            if len(bricks_under) == 1 and id(b := bricks_under[0]) not in not_safe:
                 not_safe.add(id(b))
                 yield b
 
@@ -225,17 +222,11 @@ class SandFall:
         self.fig.canvas.start_event_loop(timeout)
 
 
-InputData = SandFall
-
-
-def get_data() -> InputData:
-    """Retrieve all the data to begin with."""
-    return SandFall(lmap(Brick.from_repr, lines_of_file("inputs/22.txt")))
-
-
-@section(day=22, part=1)
-def part_1(sand_fall: InputData) -> int:
+@section(year=2023, day=22, part=1, sol=407)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
+    bricks = lmap(Brick.from_repr, data)
+    sand_fall = SandFall(bricks)
     sand_fall.update_display(timeout=1)
     sand_fall.apply_gravity()
     sand_fall.update_display(timeout=1)
@@ -243,11 +234,13 @@ def part_1(sand_fall: InputData) -> int:
     return len(sand_fall.bricks) - len(tuple(not_safe))
 
 
-@section(day=22, part=2)
-def part_2(sand_fall: InputData) -> int:
+@section(year=2023, day=22, part=2, sol=59266)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
     # pylint: disable-next=unused-variable, redefined-outer-name
     VERBOSE = False  # change verbose to avoid create figures while copying the sandfall
+    bricks = lmap(Brick.from_repr, data)
+    sand_fall = SandFall(bricks)
     sand_fall.apply_gravity(display_steps=False)
     not_safe = sorted(sand_fall.not_safe_desintegrate())
 
@@ -261,5 +254,6 @@ def part_2(sand_fall: InputData) -> int:
 
 
 if __name__ == "__main__":
-    part_1(get_data())  # P1: 407
-    part_2(get_data())  # P2: 59266
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

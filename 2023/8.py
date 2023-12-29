@@ -1,13 +1,9 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
 import math
-from typing import Any
+from typing import Iterator
 from itertools import cycle
-import os
-from utils import lines_of_file, lmap
-
-DATA_PATH = "inputs/"
-DAY = os.path.basename(__file__).split(".")[0]
+from utils import section, lmap
 
 
 class Node:
@@ -25,14 +21,6 @@ class Node:
             self.L = nodes[dictionnary[self.L]]
 
 
-def get_data() -> tuple[str, list[Node]]:
-    """Retrieve all the data to begin with."""
-    l = lines_of_file(f"{DATA_PATH}{DAY}.txt")
-    sequence = next(l)
-    next(l)
-    return sequence, lmap(Node, l)
-
-
 def rollout(seq: str, node: Node, part=1) -> int:
     """Return the number of steps to reach an end"""
     for steps, d in enumerate(cycle(seq)):
@@ -42,37 +30,38 @@ def rollout(seq: str, node: Node, part=1) -> int:
     return -1
 
 
-def part_1() -> None:
+@section(year=2023, day=8, part=1, sol=13019)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
-    sequence, l = get_data()
-    name_to_id = {node.name: i for i, node in enumerate(l)}
-    for node in l:
-        node.build_path(name_to_id, l)
+    sequence = next(data)
+    next(data)  # empty line
+    nodes = lmap(Node, data)
 
-    print_answer(rollout(seq=sequence, node=l[0]), part=1)
+    name_to_id = {node.name: i for i, node in enumerate(nodes)}
+    for node in nodes:
+        node.build_path(name_to_id, nodes)
+
+    return rollout(seq=sequence, node=nodes[0])
 
 
-def part_2() -> None:
+@section(year=2023, day=8, part=2, sol=13524038372771)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
-    sequence, l = get_data()
-    name_to_id = {node.name: i for i, node in enumerate(l)}
-    for node in l:
-        node.build_path(name_to_id, l)
+    sequence = next(data)
+    next(data)  # empty line
+    nodes = lmap(Node, data)
 
-    start_nodes = set(filter(lambda x: x.name[-1] == 'A', l))
+    name_to_id = {node.name: i for i, node in enumerate(nodes)}
+    for node in nodes:
+        node.build_path(name_to_id, nodes)
+
+    start_nodes = set(filter(lambda x: x.name[-1] == 'A', nodes))
     steps = map(lambda n: rollout(seq=sequence, node=n, part=2), start_nodes)
 
-    print_answer(math.lcm(*steps), part=2)
-
-
-def print_answer(answer: Any, part, print_fn=print) -> None:
-    """Shorthand to print answer."""
-    print("=" * 50)
-    print(f"[DAY {DAY}] Answer to part {part} is:\n\n\t")
-    print_fn(answer)
-    print("\n", "=" * 50, sep="")
+    return math.lcm(*steps)
 
 
 if __name__ == "__main__":
-    part_1()  # P1: 13019
-    part_2()  # P2: 13524038372771
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

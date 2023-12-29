@@ -1,12 +1,11 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
-from typing import Iterable
+from typing import Iterable, Iterator
 from queue import Queue
 from enum import Enum
 import sys
 from more_itertools import flatten
-from utils import lines_of_file, print_answer
-from utils import grid_map, enumerate_grid, lmap
+from utils import section, grid_map, enumerate_grid, lmap
 from utils_types import Grid, Coordinate
 
 VERBOSE = True
@@ -149,25 +148,21 @@ class EdgeGraph:
                 self.flood_fill((ni, nj), color=color)
 
 
-def get_data() -> Grid[Tile]:
-    """Retrieve all the data to begin with."""
-    l = lines_of_file("inputs/10.txt")
-    l = lmap(list, l)                   # convert to grid
-    return grid_map(Tile.from_char, l)  # convert to Tiles
-
-
-def part_1() -> None:
+@section(year=2023, day=10, part=1, sol=6757)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
-    maze = PipeMaze(get_data())
+    grid = grid_map(Tile.from_char, lmap(list, data))
+    maze = PipeMaze(grid)
     maze.find_path()
-    max_depth = max(flatten(maze.grid)).depth
-
-    print_answer(max_depth, day=10, part=1)
+    return max(flatten(maze.grid)).depth
 
 
-def part_2() -> None:
+@section(year=2023, day=10, part=2, sol=523)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
-    maze = PipeMaze(get_data())
+    grid = lmap(list, data)
+    grid = grid_map(Tile.from_char, grid)
+    maze = PipeMaze(grid)
     maze.find_path()
     edges = EdgeGraph(maze)
     edges.flood_fill((0, 0), color="0")
@@ -190,10 +185,10 @@ def part_2() -> None:
             for row in path_grid:
                 f.write("".join(row) + "\n")
 
-    interior_points = sum(e == '~' for e in flatten(path_grid))
-    print_answer(interior_points, day=10, part=2)
+    return sum(e == '~' for e in flatten(path_grid))  # interior points
 
 
 if __name__ == "__main__":
-    part_1()  # P1: 6757
-    part_2()  # P2: 523
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

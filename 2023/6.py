@@ -1,13 +1,9 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
-from typing import Iterable, Any
+from typing import Iterator
 from dataclasses import dataclass
-import os
 import math
 from numpy.polynomial import Polynomial
-from utils import lines_of_file, lfilter, lmap
-
-DATA_PATH = "inputs/"
-DAY = os.path.basename(__file__).split(".")[0]
+from utils import section
 
 
 @dataclass
@@ -51,42 +47,33 @@ class Race:
         return (math.ceil(r1), math.floor(r2))
 
 
-def get_data() -> Iterable[list[str]]:
-    """Retrieve all the data to begin with."""
-    l = lines_of_file(f"{DATA_PATH}{DAY}.txt")
-    l = map(lambda x: lfilter(None, x.split(' ')[1:]), l)
-    return l
-
-
-def part_1() -> None:
+@section(year=2023, day=6, part=1, sol=840336)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
-    l = map(lambda x: lmap(int, x), get_data())  # convert data to int
+    # retrieve data and remove trailing whitespaces
+    times = filter(None, next(data).split(' ')[1:])
+    distances = filter(None, next(data).split(' ')[1:])
 
     total = 1
-    for time_limit, record in zip(*l):
-        r = Race(time_limit=time_limit, record=record)
+    for time_limit, record in zip(times, distances):
+        r = Race(time_limit=int(time_limit), record=int(record))
         total *= r.nbr_beat_record()
 
-    print_answer(total, part=1)
+    return total
 
 
-def part_2() -> None:
+@section(year=2023, day=6, part=2, sol=41382569)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
-    l = map(''.join, get_data())    # data needs in fact to be concatenated
-    max_time, record = map(int, l)  # convert to int
-    race = Race(max_time, record)   # create the race
+    # data needs in fact to be concatenated
+    max_time = ''.join(next(data).split(' ')[1:])
+    record = ''.join(next(data).split(' ')[1:])
+    race = Race(int(max_time), int(record))   # create the race
 
-    print_answer(race.nbr_beat_record(), part=2)
-
-
-def print_answer(answer: Any, part, print_fn=print) -> None:
-    """Shorthand to print answer."""
-    print("=" * 50)
-    print(f"[DAY {DAY}] Answer to part {part} is:\n\n\t")
-    print_fn(answer)
-    print("\n", "=" * 50, sep="")
+    return race.nbr_beat_record()
 
 
 if __name__ == "__main__":
-    part_1()  # P1: 840336
-    part_2()  # P2: 41382569
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

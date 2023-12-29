@@ -1,17 +1,12 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
-from typing import Iterator, Any
-# pylint: disable-next=unused-import
+from typing import Iterator
 from dataclasses import dataclass, field
-import os
 from queue import LifoQueue
 from functools import reduce
 from itertools import chain
 from more_itertools import batched
-from utils import lines_of_file, lmap
-
-DATA_PATH = "inputs/"
-DAY = os.path.basename(__file__).split(".")[0]
+from utils import section, lmap
 
 
 @dataclass
@@ -107,46 +102,44 @@ class Map:
                 yield curr
 
 
-def get_data() -> tuple[list[int], Iterator[Map]]:
-    """Retrieve all the data to begin with."""
-    l = lines_of_file(f"{DATA_PATH}{DAY}.txt")
-    seeds = next(l).split(": ")[1]
-    seeds = lmap(int, seeds.split(" "))
-
-    def generate_maps() -> Iterator[Map]:
-        curr = Map()
-        for row in l:
-            if "map:" in row:
-                # the row starts a new map, yield the previous one
-                if not curr.empty:
-                    yield curr
-                curr = Map()
-            elif row:
-                # the row describe a range: we retrieve de data
-                dest, src, steps = map(int, row.split(' '))
-                # we add the map range to the last map
-                curr.ranges.append(
-                    MapRange(dest=dest, src=src, steps=steps)
-                )
-        yield curr
-
-    return seeds, generate_maps()
+def generate_maps(data: Iterator[str]) -> Iterator[Map]:
+    """Generate map objects from data."""
+    curr = Map()
+    for row in data:
+        if "map:" in row:
+            # the row starts a new map, yield the previous one
+            if not curr.empty:
+                yield curr
+            curr = Map()
+        elif row:
+            # the row describe a range: we retrieve de data
+            dest, src, steps = map(int, row.split(' '))
+            # we add the map range to the last map
+            curr.ranges.append(
+                MapRange(dest=dest, src=src, steps=steps)
+            )
+    yield curr
 
 
-def part_1() -> None:
+@section(year=2023, day=5, part=1, sol=382895070)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
-    seeds, maps = get_data()
+    seeds = lmap(int, next(data).split(": ")[1].split(" "))
+    maps = generate_maps(data)
 
+    # TODO: use reduce
     values = seeds
     for m in maps:
         values = map(m.map, values)
 
-    print_answer(min(values), part=1)
+    return min(values)
 
 
-def part_2() -> None:
+@section(year=2023, day=5, part=2, sol=17729182)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
-    seeds, maps = get_data()
+    seeds = lmap(int, next(data).split(": ")[1].split(" "))
+    maps = generate_maps(data)
 
     ranges = (
         Range.from_step(start=start, steps=length)
@@ -157,18 +150,10 @@ def part_2() -> None:
         ranges = map(m.map_range, ranges)
         ranges = reduce(chain, ranges)
 
-    min_values = lmap(lambda x: x.start, ranges)
-    print_answer(min(min_values), part=2)
-
-
-def print_answer(answer: Any, part, print_fn=print) -> None:
-    """Shorthand to print answer."""
-    print("=" * 50)
-    print(f"[DAY {DAY}] Answer to part {part} is:\n\n\t")
-    print_fn(answer)
-    print("\n", "=" * 50, sep="")
+    return min(x.start for x in ranges)
 
 
 if __name__ == "__main__":
-    part_1()  # P1: 382895070
-    part_2()  # P2: 17729182
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

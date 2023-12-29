@@ -2,20 +2,15 @@
 from __future__ import annotations
 from typing import Callable, Iterator
 from queue import PriorityQueue
-from utils import lines_of_file, section, grid_map, lmap
+from utils import section, grid_map, lmap
 from utils_types import Grid, Coordinate
-
-DAY = 17
-TEST = True
-VERBOSE = True
-
-InputData = Grid[int]
 
 directions = {'<': (0, -1), '>': (0, 1), '^': (-1, 0), 'v': (1, 0)}
 opposite = {'<': '>', '>': '<', '^': 'v', 'v': '^'}
 
 
 def neighbors(grid: Grid[int], node: Node) -> Iterator[Node]:
+    """Compute neighbors of a node: the new position and """
     (i, j), dirs = node
     for new_d, (di, dj) in directions.items():
         ni, nj = i + di, j + dj
@@ -63,30 +58,29 @@ def uniformCostSearch(
     raise RuntimeError("No final State found")
 
 
-def get_data() -> InputData:
-    """Retrieve all the data to begin with."""
-    grid = lmap(list, lines_of_file("inputs/17.txt"))  # convert to grid
-    return grid_map(int, grid)                         # convert grid from str to int
-
-
-@section(day=DAY, part=1)
-def part_1(data: InputData) -> int:
+@section(year=2023, day=17, part=1, sol=845)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
+    grid = lmap(list, data)     # convert to grid
+    grid = grid_map(int, grid)  # convert grid from str to int
 
     def is_terminal(node: Node) -> bool:
-        return node[0] == (len(data) - 1, len(data[0]) - 1)
+        return node[0] == (len(grid) - 1, len(grid[0]) - 1)
 
     def is_valid(node: Node, new_node: Node) -> bool:
         (_, dirs), (_, new_dirs) = node, new_node
         # don't go back and maximum inertia
         return not dirs or new_dirs[-1] != opposite[dirs[-1]] and len(new_dirs) <= 3
 
-    return uniformCostSearch(data, is_terminal, is_valid)[0]
+    return uniformCostSearch(grid, is_terminal, is_valid)[0]
 
 
-@section(day=DAY, part=2)
-def part_2(grid: InputData) -> int:
+@section(year=2023, day=17, part=2, sol=993)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
+    grid = lmap(list, data)     # convert to grid
+    grid = grid_map(int, grid)  # convert grid from str to int
+
     def is_terminal(node: Node) -> bool:
         pos, dirs, n, m = *node, len(grid), len(grid[0])
         fstate1 = pos == (n - 5, m - 1) and ('v' not in dirs or len(dirs) <= 6)
@@ -112,5 +106,6 @@ def part_2(grid: InputData) -> int:
 
 
 if __name__ == "__main__":
-    part_1(get_data())  # P1: 845
-    part_2(get_data())  # P2: 993
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

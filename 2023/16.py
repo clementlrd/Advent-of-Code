@@ -1,12 +1,12 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
-from typing import TypeVar
+from typing import TypeVar, Iterator
 from dataclasses import dataclass
 from itertools import repeat, chain
 from copy import deepcopy
 from enum import Enum
 from queue import LifoQueue
-from utils import lines_of_file, section, lmap, grid_map
+from utils import section, lmap, grid_map
 from utils_types import Grid, Coordinate
 
 
@@ -30,15 +30,13 @@ class Tile:
         return Mirror(c) if c in '/\\' else Splitter(c) if c in '|-' else cls(c)
 
 
-InputData = Grid[Tile]
-
-
 class Mirror(Tile):
     """A special Tile that can reflect a ray in another direction."""
     lface_seen: bool = False
     rface_seen: bool = False
 
     def reflect_beam(self, direction: Direction) -> Direction:
+        """Send a beam in another direction as a mirror will do."""
         d = direction.value
         if self.repr == '\\':
             self.rface_seen |= direction in (Direction.W, Direction.S)
@@ -55,6 +53,7 @@ class Mirror(Tile):
         raise ValueError(f'{self.repr} is not a Mirror')
 
     def already_reflect(self, direction: Direction) -> bool:
+        """Whether the mirror has already reflected a ray in these directions."""
         if self.repr == '\\':
             if direction in (Direction.W, Direction.S):
                 return self.rface_seen
@@ -74,6 +73,7 @@ class Splitter(Tile):
     pass_through: bool = False
 
     def reflect_beam(self, direction: Direction) -> tuple[Direction, ...]:
+        """Split the beam according to the splitter functionning."""
         d = direction.value
         if self.repr == "|" and not d.imag:  # horizontal
             self.split = True
@@ -85,6 +85,7 @@ class Splitter(Tile):
         return (direction, )
 
     def already_reflect(self, direction: Direction) -> bool:
+        """Whether the splitter has already reflected a ray in these directions."""
         if self.repr == '|' and not direction.value.imag:
             return self.split
         if self.repr == '-' and not direction.value.real:
@@ -124,16 +125,11 @@ def send_beam(grid: Grid[T], start: Coordinate = (0, 0)) -> None:
             i, j = int(new_pos.imag), int(new_pos.real)
 
 
-def get_data() -> InputData:
-    """Retrieve all the data to begin with."""
-    l = lines_of_file("inputs/16.txt")
-    l = lmap(list, l)                              # convert to grid
-    return grid_map(Tile.from_repr, l, pos=False)  # convert to Tiles or Mirrors
-
-
-@section(day=16, part=1)
-def part_1(grid: InputData) -> int:
+@section(year=2023, day=16, part=1, sol=7210)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
+    grid = lmap(list, data)                           # convert to grid
+    grid = grid_map(Tile.from_repr, grid, pos=False)  # convert to Tiles or Mirrors
     send_beam(grid)
     with open("visualisations/16.txt", 'w', encoding='utf-8') as f:
         for row in grid:
@@ -143,9 +139,11 @@ def part_1(grid: InputData) -> int:
     return sum((t.energized for row in grid for t in row))
 
 
-@section(day=16, part=2)
-def part_2(grid: InputData) -> int:
+@section(year=2023, day=16, part=2, sol=7673)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
+    grid = lmap(list, data)                           # convert to grid
+    grid = grid_map(Tile.from_repr, grid, pos=False)  # convert to Tiles or Mirrors
     n, m = len(grid), len(grid[0])
     top_row = zip(repeat(0), range(m))
     bottom_row = zip(repeat(n), range(m))
@@ -162,5 +160,6 @@ def part_2(grid: InputData) -> int:
 
 
 if __name__ == "__main__":
-    part_1(get_data())  # P1: 7210
-    part_2(get_data())  # P2: 7673
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

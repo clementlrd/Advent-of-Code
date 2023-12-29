@@ -1,9 +1,9 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
-from typing import Iterable
+from typing import Iterator
 from functools import lru_cache
 from dataclasses import dataclass
-from utils import lines_of_file, print_answer
+from utils import section, compose
 
 
 @dataclass
@@ -13,12 +13,12 @@ class Record:
     springs: str
     group_sizes: tuple[int, ...]
 
-    @staticmethod
-    def from_str(row: str) -> Record:
+    @classmethod
+    def from_repr(cls, _repr: str) -> Record:
         """Create Record from raw string"""
-        springs, group_sizes = row.split(" ")
+        springs, group_sizes = _repr.split(" ")
         group_sizes = map(int, group_sizes.split(","))  # convert data to int
-        return Record(springs, tuple(group_sizes))      # create record
+        return cls(springs, tuple(group_sizes))         # create record
 
     def unfold(self, n=5) -> Record:
         """Create a new Record object with a number `n` of unfolding."""
@@ -58,27 +58,21 @@ class Record:
         return recursive_count(self.springs, self.group_sizes)
 
 
-def get_data() -> Iterable[Record]:
-    """Retrieve all the data to begin with."""
-    return map(Record.from_str, lines_of_file("inputs/12.txt"))
-
-
-def part_1() -> None:
+@section(year=2023, day=12, part=1, sol=7236)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
-    l = get_data()
-    arrangements = sum(map(Record.count, l))
-
-    print_answer(arrangements, day=12, part=1)
+    records = map(Record.from_repr, data)
+    return sum(map(Record.count, records))
 
 
-def part_2() -> None:
+@section(year=2023, day=12, part=2, sol=11607695322318)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
-    l = map(Record.unfold, get_data())
-    arrangements = sum(map(Record.count, l))
-
-    print_answer(arrangements, day=12, part=2)
+    records = map(compose(Record.unfold, Record.from_repr), data)
+    return sum(map(Record.count, records))
 
 
 if __name__ == "__main__":
-    part_1()  # P1: 7236
-    part_2()  # P2: 11607695322318
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

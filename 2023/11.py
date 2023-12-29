@@ -1,8 +1,8 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
+from typing import Iterator
 from itertools import combinations, starmap
-from utils import lines_of_file, print_answer
-from utils import lmap, manhattan_distance, enumerate_grid, enumerate_cols
+from utils import section, lmap, manhattan_distance, enumerate_grid, enumerate_cols
 from utils_types import Grid, Coordinate
 
 
@@ -33,23 +33,21 @@ class Space:
         return sum(distances)
 
 
-def get_data() -> Grid[str]:
-    """Retrieve all the data to begin with."""
-    return lmap(list, lines_of_file("inputs/11.txt"))
-
-
-def part_1() -> None:
+@section(year=2023, day=11, part=1, sol=9545480)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
-    total_distances = Space(get_data()).all_distances()
-    print_answer(total_distances, day=11, part=1)
+    grid = lmap(list, data)
+    return Space(grid).all_distances()
 
 
-def part_2() -> None:
+@section(year=2023, day=11, part=2, sol=406725732046)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
-    total_distances = Space(get_data(), factor=1000000).all_distances()
-    print_answer(total_distances, day=11, part=2)
+    grid = lmap(list, data)
+    return Space(grid, factor=1000000).all_distances()
 
 
 if __name__ == "__main__":
-    part_1()  # P1: 9545480
-    part_2()  # P2: 406725732046
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

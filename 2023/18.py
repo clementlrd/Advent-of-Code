@@ -1,17 +1,11 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
 from typing import Iterator
-from utils import lines_of_file, section
+from utils import section
 from utils_types import Coordinate
 
 
-InputData = Iterator[str]
 directions: dict[str, Coordinate] = {'R': (1, 0), 'L': (-1, 0), 'U': (0, 1), 'D': (0, -1)}
-
-
-def get_data() -> InputData:
-    """Retrieve all the data to begin with."""
-    return lines_of_file("inputs/18.txt")
 
 
 def total_points(area: int, border_points: int) -> int:
@@ -23,8 +17,8 @@ def total_points(area: int, border_points: int) -> int:
     return area + 1 + border_points // 2
 
 
-@section(day=18, part=1)
-def part_1(data: InputData) -> float:
+@section(year=2023, day=18, part=1, sol=42317)
+def part_1(data: Iterator[str]) -> float:
     """Code for section 1"""
     x1, y1, area, border_points = 0, 0, 0, 0
     for raw_edges in data:
@@ -40,8 +34,8 @@ def part_1(data: InputData) -> float:
     return total_points(int(abs(area)), border_points)
 
 
-@section(day=18, part=2)
-def part_2(data: InputData) -> float:
+@section(year=2023, day=18, part=2, sol=83605563360288)
+def part_2(data: Iterator[str]) -> float:
     """Code for section 2"""
     dir_code = {'0': 'R', '1': 'D', '2': 'L', '3': 'U'}
     x1, y1, area, border_points = 0, 0, 0, 0
@@ -61,5 +55,6 @@ def part_2(data: InputData) -> float:
 
 if __name__ == "__main__":
     # TODO: visualization with matplotlib
-    part_1(get_data())  # P1: 42317
-    part_2(get_data())  # P2: 83605563360288
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

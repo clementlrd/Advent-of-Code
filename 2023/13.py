@@ -1,16 +1,13 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
-from typing import Iterable
-from utils import lines_of_file, print_answer
-from utils import transpose, lmap
+from typing import Iterator
+from utils import transpose, section
 from utils_types import Grid
-
-DAY = 13
-PART = 1
-TEST = False
 
 
 def is_row_reflection(grid: Grid[str], row: int, smudge: bool = False) -> bool:
+    """Whether the row is a reflection for the grid or not,
+    where the given row is the first row of the reflection of the right part"""
     size = min(row, len(grid) - row)
     left, right = grid[row - size:row], grid[row:row + size]
 
@@ -43,12 +40,10 @@ def find_row_reflection(grid: Grid[str], smudge: bool = False) -> int:
     return 0
 
 
-def get_data() -> list[Grid[str]]:
+def build_scenes(data: Iterator[str]) -> list[Grid[str]]:
     """Retrieve all the data to begin with."""
-    l = lines_of_file(f"inputs/{DAY if not TEST else 'test'}.txt")
-
     scenes: list[Grid[str]] = [[]]
-    for row in l:
+    for row in data:
         if not row:
             scenes.append([])
         else:
@@ -57,30 +52,31 @@ def get_data() -> list[Grid[str]]:
     return scenes
 
 
-def part_1() -> None:
+@section(year=2023, day=13, part=1, sol=27300)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
-    scenes = get_data()
-    result = 0
+    scenes, result = build_scenes(data), 0
     for scene in scenes:
         i = find_row_reflection(scene)
         j = find_row_reflection(transpose(scene))
         result += j + 100 * i
 
-    print_answer(result, day=DAY, part=1)
+    return result
 
 
-def part_2() -> None:
+@section(year=2023, day=13, part=2, sol=29276)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
-    scenes = get_data()
-    result = 0
+    scenes, result = build_scenes(data), 0
     for scene in scenes:
         i = find_row_reflection(scene, smudge=True)
         j = find_row_reflection(transpose(scene), smudge=True)
         result += j + 100 * i
 
-    print_answer(result, day=DAY, part=2)
+    return result
 
 
 if __name__ == "__main__":
-    part_1()  # P1:
-    part_2()  # P2:
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()

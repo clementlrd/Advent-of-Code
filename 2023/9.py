@@ -1,13 +1,9 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
-from typing import Iterable, Any
+from typing import Iterator
 from dataclasses import dataclass, field
 from itertools import pairwise, starmap
-import os
-from utils import lines_of_file, lmap
-
-DATA_PATH = "inputs/"
-DAY = os.path.basename(__file__).split(".")[0]
+from utils import section, lmap
 
 
 @dataclass(slots=True)
@@ -36,6 +32,7 @@ class History:
 
     def predict_before(self) -> int:
         """Extrapolate the first value"""
+        # TODO: use predict next with reversed order
         first_values = (diffs[0] for diffs in self.differences[::-1])
         predicted = 0
         for value in first_values:
@@ -48,30 +45,21 @@ class History:
         return History(lmap(int, string.split(" ")))
 
 
-def get_data() -> Iterable[History]:
-    """Retrieve all the data to begin with."""
-    l = lines_of_file(f"{DATA_PATH}{DAY}.txt")
-    return map(History.from_str, l)
-
-
-def part_1() -> None:
+@section(year=2023, day=9, part=1, sol=2008960228)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
-    print_answer(sum(x.predict_next() for x in get_data()), part=1)
+    histories = map(History.from_str, data)
+    return sum(x.predict_next() for x in histories)
 
 
-def part_2() -> None:
+@section(year=2023, day=9, part=2, sol=1097)
+def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
-    print_answer(sum(x.predict_before() for x in get_data()), part=2)
-
-
-def print_answer(answer: Any, part: int, print_fn=print) -> None:
-    """Shorthand to print answer."""
-    print("=" * 50)
-    print(f"[DAY {DAY}] Answer to part {part} is:\n\n\t")
-    print_fn(answer)
-    print("\n", "=" * 50, sep="")
+    histories = map(History.from_str, data)
+    return sum(x.predict_before() for x in histories)
 
 
 if __name__ == "__main__":
-    part_1()  # P1: 2008960228
-    part_2()  # P2: 1097
+    # pylint: disable=no-value-for-parameter
+    part_1()
+    part_2()
