@@ -1,16 +1,29 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
+from typing import Iterator, Iterable
 from dataclasses import dataclass
 import random
 
-from utils import lines_of_file, section
+from utils import section
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Graph:
     """Represents a graph with a list of edges"""
     vertices: list[str]
     edges: list[tuple[str, str]]
+
+    @classmethod
+    def from_text(cls, text: Iterable[str]) -> Graph:
+        """Create graph from the input text."""
+        verticies, edges = set[str](), []
+        for r in text:
+            v, es = r.split(': ')
+            verticies.add(v)
+            for e in es.split(' '):
+                verticies.add(e)
+                edges.append((v, e))
+        return Graph(list(verticies), edges)
 
 
 def min_cut(graph: Graph):
@@ -41,33 +54,18 @@ def min_cut(graph: Graph):
     return edges, vertices
 
 
-InputData = Graph
-
-
-def get_data() -> InputData:
-    """Retrieve all the data to begin with."""
-    verticies = set[str]()
-    edges = []
-    for r in lines_of_file("inputs/25.txt"):
-        v, es = r.split(': ')
-        verticies.add(v)
-        for e in es.split(' '):
-            verticies.add(e)
-            edges.append((v, e))
-    return Graph(list(verticies), edges)
-
-
-@section(day=25, part=1, sol=596376)
-def part_1(graph: InputData) -> int:
+@section(year=2023, day=25, part=1, sol=596376)
+def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
+    graph = Graph.from_text(data)
     edges, v1, v2 = [], '', ''
-    random.seed(16)
+    random.seed(16)   # set a seed because the algorithm is random, allow reproducibility
     while len(edges) != 3:
-        print('iter')
         # We want to have only 3 edges between the 2 components
         edges, (v1, v2) = min_cut(graph)
     return len(v1.split('|')) * len(v2.split('|'))
 
 
 if __name__ == "__main__":
-    part_1(get_data())  # P1:
+    # pylint: disable=no-value-for-parameter
+    part_1()
