@@ -27,14 +27,12 @@ class Card:
         """Create a card from the input string represented as follow:
         `Card [id]: [winning_numbers...] | [numbers...]`
         """
-        _, line = _repr.split(":")                  # remove unused text
-        win_numbers, numbers = lmap(
-            lambda x: filter(None, x.split(" ")),  # remove white spaces and separate numbers
-            line.split("|")                        # split winning numbers and numbers
-        )
-        # convert numbers to int
-        win_numbers, numbers = map(int, win_numbers), map(int, numbers)
-        return cls(set(win_numbers), set(numbers))
+        def format_(n: str) -> set[int]:
+            numbers = filter(None, n.split(" "))  # remove white spaces and separate numbers
+            return set(map(int, numbers))         # convert numbers to int in a set
+
+        _, win_numbers, numbers = _repr.replace(':', ' |').split('|')
+        return cls(format_(win_numbers), format_(numbers))
 
 
 @dataclass(slots=True)
