@@ -93,13 +93,11 @@ class Map:
                     yield Range(start=r.dest, end=r.dest + r.steps - 1)
 
                 else:
-                    # the range has nothing to do with this MapRange
-                    continue
+                    continue  # the range has nothing to do with this MapRange
 
                 break
             else:
-                # no update made, the range is not in the Map
-                yield curr
+                yield curr    # no update made, the range is not in the Map
 
 
 def generate_maps(data: Iterator[str]) -> Iterator[Map]:
@@ -115,9 +113,7 @@ def generate_maps(data: Iterator[str]) -> Iterator[Map]:
             # the row describe a range: we retrieve de data
             dest, src, steps = map(int, row.split(' '))
             # we add the map range to the last map
-            curr.ranges.append(
-                MapRange(dest=dest, src=src, steps=steps)
-            )
+            curr.ranges.append(MapRange(dest=dest, src=src, steps=steps))
     yield curr
 
 
@@ -127,11 +123,8 @@ def part_1(data: Iterator[str]) -> int:
     seeds = lmap(int, next(data).split(": ")[1].split(" "))
     maps = generate_maps(data)
 
-    # TODO: use reduce
-    values = seeds
-    for m in maps:
-        values = map(m.map, values)
-
+    # apply successive maps
+    values = reduce(lambda acc, m: map(m.map, acc), maps, seeds)
     return min(values)
 
 
@@ -141,14 +134,15 @@ def part_2(data: Iterator[str]) -> int:
     seeds = lmap(int, next(data).split(": ")[1].split(" "))
     maps = generate_maps(data)
 
+    # create ranges from seeds
     ranges = (
         Range.from_step(start=start, steps=length)
         for start, length in batched(seeds, 2)  # type: ignore
     )
 
     for m in maps:
-        ranges = map(m.map_range, ranges)
-        ranges = reduce(chain, ranges)
+        ranges = map(m.map_range, ranges)  # apply maps
+        ranges = reduce(chain, ranges)     # stack ranges
 
     return min(x.start for x in ranges)
 
