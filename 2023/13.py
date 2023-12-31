@@ -1,6 +1,8 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
 from typing import Iterator
+from itertools import chain
+
 from utils import transpose, section
 from utils_types import Grid
 
@@ -9,22 +11,11 @@ def is_row_reflection(grid: Grid[str], row: int, smudge: bool = False) -> bool:
     """Whether the row is a reflection for the grid or not,
     where the given row is the first row of the reflection of the right part"""
     size = min(row, len(grid) - row)
-    left, right = grid[row - size:row], grid[row:row + size]
-
-    if not smudge:
-        return all(l == r for l, r in zip(left[::-1], right))
-
-    smudge_found = False
-    for l, r in zip(left[::-1], right):
-        diffs = sum((a != b for a, b in zip(l, r)))
-        if diffs == 1:
-            # found a smudge
-            if smudge_found:
-                return False  # there is only one smudge
-            smudge_found = True
-        if diffs > 1:
-            return False
-    return smudge_found
+    # left is in reverse order to compute similarities
+    left = chain.from_iterable(grid[row - size:row][::-1])
+    right = chain.from_iterable(grid[row:row + size])
+    diffs = sum(l != r for l, r in zip(left, right))
+    return diffs == int(smudge)
 
 
 def find_row_reflection(grid: Grid[str], smudge: bool = False) -> int:
@@ -33,7 +24,8 @@ def find_row_reflection(grid: Grid[str], smudge: bool = False) -> int:
     for i, row in enumerate(grid):
         if i == 0:
             continue
-        diffs = sum((a != b for a, b in zip(row, grid[i - 1])))
+        # find two contiguous and rows
+        diffs = sum(a != b for a, b in zip(row, grid[i - 1]))
         if diffs == 0 or smudge and diffs == 1:
             if is_row_reflection(grid, row=i, smudge=smudge):
                 return i
