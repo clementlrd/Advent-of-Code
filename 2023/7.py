@@ -19,7 +19,7 @@ class Rule(Protocol):
 
 class Rule1:
     """The rule for the first part"""
-    cards_order = lmap(str, range(2, 10)) + ["T", "J", "Q", "K", "A"]
+    cards_order = [str(d) for d in range(2, 10)] + ["T", "J", "Q", "K", "A"]
     cards_to_strength = {k: i for i, k in enumerate(cards_order)}
 
     @staticmethod
@@ -31,7 +31,7 @@ class Rule1:
 
 class Rule2:
     """The rule for the second part"""
-    cards_order = ["J"] + lmap(str, range(2, 10)) + ["T", "Q", "K", "A"]
+    cards_order = ["J"] + [str(d) for d in range(2, 10)] + ["T", "Q", "K", "A"]
     cards_to_strength = {k: i for i, k in enumerate(cards_order)}
 
     @staticmethod
@@ -65,8 +65,8 @@ class Hand:
     """A class representing a Hand"""
     desc: str  # string representation
     bid: int
-    card_strengths: list[int] = field(init=False)
-    counter: Counter[str] = field(init=False)
+    card_strengths: list[int] = field(init=False, repr=False)
+    counter: Counter[str] = field(init=False, repr=False)
 
     def set_rule(self, rule: Rule) -> Self:
         """Apply a rule to the hand"""
@@ -82,21 +82,17 @@ class Hand:
             return HandType.HightCard
         if len(values) == 4:
             return HandType.OnePair
-        if len(values) == 3:
-            if 3 in values and 1 in values:
-                return HandType.ThreeOfKind
-            if 2 in values and 1 in values:
-                return HandType.TwoPair
-            raise ValueError("Unknown Hand Type with 3 cards")
-        if len(values) == 2:
-            if 3 in values and 2 in values:
-                return HandType.FullHouse
-            if 4 in values and 1 in values:
-                return HandType.FourOfKind
-            raise ValueError("Unknown Hand Type with 2 cards")
+        if len(values) == 3 and 3 in values and 1 in values:
+            return HandType.ThreeOfKind
+        if len(values) == 3 and 2 in values and 1 in values:
+            return HandType.TwoPair
+        if len(values) == 2 and 3 in values and 2 in values:
+            return HandType.FullHouse
+        if len(values) == 2 and 4 in values and 1 in values:
+            return HandType.FourOfKind
         if len(values) == 1:
             return HandType.FiveOfKind
-        raise ValueError("Unknown Hand Type")
+        raise ValueError("Unknown Hand Type for Hand", self)
 
     def __lt__(self, other: Hand) -> bool:
         if self.hand_type == other.hand_type:
