@@ -11,9 +11,9 @@ class Space:
 
     def __init__(self, grid: Grid[str], factor=2) -> None:
         self.factor = factor
-        self.galaxies = {pos for pos, e in enumerate_grid(grid) if e == "#"}
-        self.empty_rows = [i for i, row in enumerate(grid) if "#" not in row]
+        self.galaxies = {pos for pos, e in enumerate_grid(grid) if "#" == e}
         self.empty_cols = [j for j, col in enumerate_cols(grid) if "#" not in col]
+        self.empty_rows = [i for i, row in enumerate(grid)      if "#" not in row]
 
     def distance(self, g1: Coordinate, g2: Coordinate) -> int:
         """Compute distances inside the space,
