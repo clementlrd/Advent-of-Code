@@ -1,5 +1,5 @@
 """A module to make dev faster."""
-from typing import Callable, Literal, Any, Optional, TextIO
+from typing import Callable, Literal, Any, Optional, TextIO, overload
 from collections.abc import Iterable, Iterator
 from itertools import chain
 from functools import reduce
@@ -172,15 +172,25 @@ def compose(
 #
 
 
+@overload
+def grid_map(fn: Callable[[T], S], grid: Grid[T], pos: Literal[False] = False) -> Grid[S]: ...
+
+
+@overload
+def grid_map(fn: Callable[[tuple[int, int], T], S], grid: Grid[T], pos: Literal[True]) -> Grid[S]:
+    ...
+
+
 def grid_map(
     fn: Callable[[tuple[int, int], T], S] | Callable[[T], S],
     grid: Grid[T],
-    pos=False
+    pos: bool = False
 ) -> Grid[S]:
     """Map a function over a grid. The function needs to take the position and the element as input.
     It returns a new grid."""
-    return [
-        [fn((i, j), e) if pos else fn(e) for j, e in enumerate(row)]  # type: ignore
+    return [[
+        fn((i, j), e) if pos else fn(e)  # type: ignore # fix with overloading
+        for j, e in enumerate(row)]
         for i, row in enumerate(grid)
     ]
 
