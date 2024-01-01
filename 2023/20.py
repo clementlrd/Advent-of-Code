@@ -1,8 +1,9 @@
 """Resolve a daily problem"""  # pylint: disable=invalid-name
 from __future__ import annotations
-from typing import Optional, Protocol, Any, Iterable, Iterator
+from typing import TypedDict, Protocol, Iterable, Iterator
 from dataclasses import dataclass, field
 from itertools import accumulate, repeat
+from collections import defaultdict
 from queue import Queue
 from enum import Enum
 import math
@@ -25,11 +26,8 @@ class Module(Protocol):
         """Send a signal to its destinations when receiving the signal `input` from `module`."""
 
 
-Circuit = dict[str, Module]
-
-
-@dataclass
-class Broadcaster(Module):
+@dataclass(frozen=True, slots=True)
+class Broadcaster:
     """A module that send the signal it receives from a `button`."""
     destinations: list[str]
 
@@ -38,8 +36,8 @@ class Broadcaster(Module):
         return input_signal
 
 
-@dataclass
-class FlipFlop(Module):
+@dataclass(slots=True)
+class FlipFlop:
     """A module that send a signal according to its internal state."""
     destinations: list[str]
     state: int = 0
@@ -51,8 +49,8 @@ class FlipFlop(Module):
         return Pulse(self.state)
 
 
-@dataclass
-class Conjonction(Module):
+@dataclass(slots=True)
+class Conjunction(Module):
     """A module that send a signal according to its memory
     from the latest signal it has received from each module."""
     destinations: list[str]
@@ -68,92 +66,89 @@ class Conjonction(Module):
         return Pulse(not filled)
 
 
-def press_button(
-    modules: dict[str, Module],
-    watch_trigger: Optional[dict[str, Pulse]] = None
-) -> dict[str, Any]:
-    """Press a buttons and wait until all the signals has been propagated.
-    It returns a dictionnary with data: The number of low pulses and high pulses sent,
-    and whether a module have been triggered with a pulse or not."""
-    # TODO: add into a class named Button
-    # setup data
-    data: dict[str, Any] = {'Low': 0, 'High': 0, 'triggered': {}}
-    if watch_trigger is not None:
-        data['triggered'] = {k: False for k in watch_trigger.keys()}
+class Circuit:
+    """Create a circuit of modules, where there is a button that can be pressed,
+    connected to a broadcaster and a serie of modules (Conjunctions and FlipFlop).
+    """
 
-    # main loop
-    queue = Queue[tuple[str, Pulse, str]]()  # BFS
-    queue.put(('button', Pulse.Low, 'broadcaster'))
-    while not queue.empty():
-        previous, pulse, name = queue.get()
-        data[pulse.name] += 1   # register pulse
+    class InfoDict(TypedDict):
+        """Collects informations when the button is pressed"""
+        Low: int
+        High: int
+        triggered: dict[tuple[str, Pulse], bool]
 
-        if watch_trigger is not None and pulse == watch_trigger.get(previous, None):
-            # register that the module is trigger with the given signal
-            data['triggered'][previous] = True
-        if name == 'rx':
-            continue  # not in registered modules
-        module = modules[name]
+    def __init__(self, data: Iterable[str]) -> None:
+        module_class = {'b': Broadcaster, '%': FlipFlop, '&': Conjunction}
+        self.output_to_input: dict[str, set[str]] = defaultdict(set)  # to connect conjunctions
+        self.modules = dict[str, Module]()
+        self.info: Circuit.InfoDict = {'Low': 0, 'High': 0, 'triggered': {}}
 
-        new_pulse = module.send(previous, pulse)
-        if new_pulse is None:
-            continue
-        for m, p in zip(module.destinations, repeat(new_pulse)):
-            queue.put((name, p, m))
+        for row in data:
+            module, dest = row.split(' -> ')
+            destinations = dest.split(', ')
 
-    return data
+            # register module
+            name = module if module == "broadcaster" else module[1:]
+            self.modules[name] = module_class[module[0]](destinations)
 
+            # gather informations for connections
+            for dest in destinations:
+                self.output_to_input[dest].add(name)
 
-def build_modules(data: Iterator[str]) -> tuple[Circuit, set[str]]:
-    """Build modules from input."""
-    module_class = {'b': Broadcaster, '%': FlipFlop, '&': Conjonction}
-    output_to_input: dict[str, set[str]] = {}
-    modules: Circuit = {}
+        # connect conjunction modules
+        for name, module in self.modules.items():
+            if isinstance(module, Conjunction):
+                module.connect(list(self.output_to_input[name]))
 
-    for row in data:
-        module, dest = row.split(' -> ')
-        destinations = dest.split(', ')
+    def add_watchers(self, watchers: Iterable[tuple[str, Pulse]]):
+        """Register watchers to know if a module has been activated with the given pulse."""
+        for e in watchers:
+            self.info['triggered'][e] = False
 
-        # register module
-        name = module if module == "broadcaster" else module[1:]
-        modules[name] = module_class[module[0]](destinations)
+    def press_button(self) -> None:
+        """Press button to send Low Signal to the broadcaster.
+        The system is not reset if the button is pressed another time."""
 
-        # gather informations
-        for dest in destinations:
-            if dest not in output_to_input:
-                output_to_input[dest] = set[str]()
-            output_to_input[dest].add(name)
+        queue = Queue[tuple[str, Pulse, str]]()  # BFS
+        queue.put(('button', Pulse.Low, 'broadcaster'))
+        while not queue.empty():
+            previous, pulse, name = queue.get()
+            self.info[pulse.name] += 1   # register pulse
 
-    # connect Conjonction modules
-    for name, module in modules.items():
-        if isinstance(module, Conjonction):
-            module.connect(list(output_to_input[name]))
+            if (previous, pulse) in self.info['triggered']:
+                # register that the module is trigger with the given signal
+                self.info['triggered'][(previous, pulse)] = True
+            if name not in self.modules:
+                continue  # destination not in registered modules
+            module = self.modules[name]
 
-    # get modules sending signal into `kz`, the predecessor of `rx`.
-    return (modules, output_to_input['kz'])
+            if (new_pulse := module.send(previous, pulse)) is None:
+                continue
+            for m, p in zip(module.destinations, repeat(new_pulse)):
+                queue.put((name, p, m))
 
 
 @section(year=2023, day=20, part=1, sol=944750144)
 def part_1(data: Iterator[str]) -> int:
     """Code for section 1"""
-    modules, _, pulses = *build_modules(data), [0, 0]
+    circuit = Circuit(data)
     for _ in range(1000):
-        info = press_button(modules)
-        for i, k in enumerate(Pulse):
-            pulses[i] += info[k.name]
-    return pulses[0] * pulses[1]
+        circuit.press_button()
+    return circuit.info['Low'] * circuit.info['High']
 
 
 @section(year=2023, day=20, part=2, sol=222718819437131)
 def part_2(data: Iterator[str]) -> int:
     """Code for section 2"""
-    modules, last_lvl = build_modules(data)
+    circuit = Circuit(data)
+    # get modules sending signal into `kz`, the predecessor of `rx`.
+    last_lvl = circuit.output_to_input['kz']
+    circuit.add_watchers(zip(last_lvl, repeat(Pulse.High)))
     cycles = dict.fromkeys(last_lvl, -1)
-    watch = dict.fromkeys(last_lvl, Pulse.High)
 
     for step in accumulate(repeat(1)):
-        info = press_button(modules, watch_trigger=watch)['triggered']
-        for name, is_triggered in info.items():
+        circuit.press_button()
+        for (name, _), is_triggered in circuit.info['triggered'].items():
             if cycles[name] < 0 and is_triggered:
                 cycles[name] = step
         if all(v > 0 for v in cycles.values()):
