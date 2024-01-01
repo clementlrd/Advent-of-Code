@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from copy import deepcopy
 import operator
 from queue import LifoQueue
-from functools import reduce
 
 from utils import section, lmap
 
@@ -13,9 +12,10 @@ operators = {'<': operator.lt, '>': operator.gt}
 variables = ('x', 'm', 'a', 's')
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Range:
-    # start and end inside the range
+    """Represents a range that can be passed to workflows by constructing range Parts.
+    start and end are inside the ranges. Operator < and > can split the range into others."""
     start: int
     end: int
 
@@ -23,7 +23,9 @@ class Range:
         return self.end - self.start + 1
 
     def __lt__(self, x: int) -> tuple[Range | None, Range | None]:
-        # succes, echec
+        """Use the < operator on an integer to split the range accordingly.
+        It returns a tuple where the first element is the range that's succeed,
+        the other one is the range that failed."""
         if self.end < x:
             return self, None
         if self.start >= x:
@@ -31,7 +33,9 @@ class Range:
         return Range(self.start, x - 1), Range(x, self.end)
 
     def __gt__(self, x: int) -> tuple[Range | None, Range | None]:
-        # succes, echec
+        """Use the > operator on an integer to split the range accordingly.
+        It returns a tuple where the first element is the range that's succeed,
+        the other one is the range that failed."""
         if self.start > x:
             return self, None
         if self.end <= x:
@@ -39,26 +43,35 @@ class Range:
         return Range(x + 1, self.end), Range(self.start, x)
 
     def __iter__(self) -> Iterator[int]:
+        """Iterate over all elements in the range."""
         return iter(range(self.start, self.end + 1))
 
 
 T = TypeVar('T', bound=int | Range)
 
 
-@dataclass
+@dataclass(slots=True)
 class Part(Generic[T]):
+    """Represents a part: 4 variables x,m,a,s."""
     x: T
     m: T
     a: T
     s: T
 
+    def __len__(self) -> int:
+        if isinstance(self.x, int):
+            return 1
+        return len(self.x) * len(self.m) * len(self.a) * len(self.s)  # type: ignore # Part[Range]
+
     @staticmethod
     def from_json(obj: str) -> Part[int]:
+        """Create a part from its json representation."""
         return Part[int](**{x[0]: int(x[2:]) for x in obj[1:-1].split(',')})
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Rule:
+    """Represents a rule of a Workflow."""
     variable: str
     op: Callable
     bound: int
@@ -66,26 +79,32 @@ class Rule:
 
     @classmethod
     def from_repr(cls, _repr: str) -> Rule:
+        """Cretae a rule from its representation."""
         cond, dest = _repr.split(':')
         v, op, b = cond[0], cond[1], cond[2:]
         return cls(variable=v, op=operators[op], bound=int(b), destination=dest)
 
     def condition(self, part: Part[int]) -> bool:
+        """Returns whether the part satisfy the condition of the rule."""
         return self.op(getattr(part, self.variable), self.bound)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Workflow:
+    """Represents a workflow of for parts."""
     rules: list[Rule]
     final: str
 
     def execute(self, part: Part[int]) -> str:
+        """Returns the destination of the part according to the workflow."""
         for rule in self.rules:
             if rule.condition(part):
                 return rule.destination
         return self.final
 
     def execute_range(self, rpart: Part[Range]) -> Iterator[tuple[Part[Range], str]]:
+        """Execute the workflow on a range Part.
+        It returns the destination of the range Parts splitted by the workflow."""
         for rule in self.rules:
             success, echec = rule.op(getattr(rpart, rule.variable), rule.bound)
             if success is not None and len(success) > 0:
@@ -136,14 +155,13 @@ def part_2(data: Iterator[str]) -> int:
     queue.put((range_part, 'in'))
     while not queue.empty():
         part, dest = queue.get()
-        for _p, _d in workflows[dest].execute_range(part):
-            if _d == 'A':
-                accepted.append(_p)
-            elif _d != 'R':
-                queue.put((_p, _d))
+        for new_part, new_dest in workflows[dest].execute_range(part):
+            if new_dest == 'A':
+                accepted.append(new_part)
+            elif new_dest != 'R':
+                queue.put((new_part, new_dest))
 
-    return sum((reduce(operator.mul, (len(getattr(part, n))
-               for n in variables)) for part in accepted))
+    return sum(map(len, accepted))
 
 
 if __name__ == "__main__":
