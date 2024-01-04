@@ -17,7 +17,7 @@ from utils_types import T, S, Coordinate, Grid, Args
 
 
 def section(
-        year: int, day: int, part: int,
+        year: int, day: int, part: Optional[int]=None,
         path: Optional[str] = None, test: bool = False,
         sol: Optional[Any] = None
 ):
@@ -40,6 +40,9 @@ def section(
             if sol is not None and result != sol:
                 raise ValueError("The result of the function is not the result awaited."
                                  f"The function returned {result} instead of {sol}")
+
+            if part is None:
+                return
 
             # print answer in the console
             def print_fn(x):
