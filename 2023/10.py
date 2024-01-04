@@ -180,7 +180,7 @@ def part_2(data: Iterator[str]) -> int:
             path_grid[i][j] = ' '    # we are outside the loop
 
     if VERBOSE:
-        with open("visualisations/10.txt", 'w', encoding="utf-8") as f:
+        with open("visualizations/10.txt", 'w', encoding="utf-8") as f:
             f.write('\n')  # print painted graph
             for row in path_grid:
                 f.write("".join(row) + "\n")

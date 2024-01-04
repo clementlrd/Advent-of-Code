@@ -76,7 +76,7 @@ def visualize(data: Iterator[str]) -> None:
         ax2.plot([x2, x2 + dx * step], [y2, y2 + dy * step])
         x2, y2 = x2 + dx * step, y2 + dy * step
 
-    fig.savefig('visualisations/18.png')
+    fig.savefig('visualizations/18.png')
 
 
 if __name__ == "__main__":

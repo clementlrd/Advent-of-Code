@@ -49,7 +49,7 @@ def part_1(data: Iterator[str]) -> int:
     grid = lmap(list, data)
     final_positions = bfs_steps(grid, max_depth=64)
     if VERBOSE:
-        with open('visualisations/21.txt', "w", encoding="utf-8") as f:
+        with open('visualizations/21.txt', "w", encoding="utf-8") as f:
             str_grid = deepcopy(grid)
             for ni, nj in final_positions:
                 if (ni, nj) != (65, 65):

@@ -131,7 +131,7 @@ def part_1(data: Iterator[str]) -> int:
     grid = lmap(list, data)                           # convert to grid
     grid = grid_map(Tile.from_repr, grid, pos=False)  # convert to Tiles or Mirrors
     send_beam(grid)
-    with open("visualisations/16.txt", 'w', encoding='utf-8') as f:
+    with open("visualizations/16.txt", 'w', encoding='utf-8') as f:
         for row in grid:
             for tile in row:
                 f.write("*" if tile.energized else tile.repr)
