@@ -15,5 +15,13 @@
 13. **[Point of Incidence:](https://adventofcode.com/2023/day/13)** Find reflections in mirrors. There can be a smudge making the two non-symmetrical.
 14. **[Parabolic Reflector Dish:](https://adventofcode.com/2023/day/14)** Move round rocks with gravity and cyclic rotations.
 15. **[Lens Library:](https://adventofcode.com/2023/day/15)** Hashmap analogy with boxes of lens.
+16. **[The floor will be lava:](https://adventofcode.com/2023/day/16)** A beam is going through Mirrors and splitters.
+17. **[Clumsy Crucible:](https://adventofcode.com/2023/day/17)** Move a crucible on a grid finding the shortest path given some additional rules (UCS).
+18. **[Lavaduct Lagoon:](https://adventofcode.com/2023/day/18)** Compute the area of a shape (lava pool) given the path of a turtle (dig plan).
+19. **[Aplenty:](https://adventofcode.com/2023/day/19)** Valid gears (Part) through workflow decision processes.
+20. **[Pulse propagation:](https://adventofcode.com/2023/day/20)** Create a pulse in a circuit of flip flop and conjunction modules, then find a cycle to find when a module will be active.
+21. **[Step Counter:](https://adventofcode.com/2023/day/21)** Find all the positions where a gardener will be after a number of steps. Repeat the process in an infinite garden.
+22. **[Sand Slabs:](https://adventofcode.com/2023/day/22)** Make bricks fall in a Tetris like fashion, then find the bricks that are safe destroying and count how many would fall in a landslide.
+23. **[A Long Walk:](https://adventofcode.com/2023/day/23)** Find the longest path in a directed graph (forest with slopes).
 24. **[Never Tell Me The Odds:](https://adventofcode.com/2023/day/24)** Find if the path of two hailstones intersect and find a path that will collide to all the HailStones. I use chinese reminder theorem for the last part to solve the equations.
 25. **[Snowverload:](https://adventofcode.com/2023/day/24)** Find 3 edges that cut a graph into 2 distinct components.
