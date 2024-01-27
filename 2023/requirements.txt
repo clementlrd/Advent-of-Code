@@ -1,0 +1,6 @@
+# I used python 3.11.5
+requests
+more-itertools
+matplotlib
+numpy
+tqdm
