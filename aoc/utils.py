@@ -4,81 +4,11 @@ from collections.abc import Iterable, Iterator
 from itertools import chain
 from functools import reduce
 
-#
-#  Types
-#
-
-T = TypeVar('T')
-S = TypeVar('S')
+from . import T, S, Args
 
 Coordinate = tuple[int, int]
 Coordinate3D = tuple[int, int, int]
 
-Args = TypeVarTuple('Args')
-
-#
-#  Itertools
-#
-
-
-def lmap(fn: Callable[[T], S], iterable: Iterable[T]) -> list[S]:
-    """list of a map object. Shorthand."""
-    return list(map(fn, iterable))
-
-
-def lfilter(fn: Callable[[T], bool] | None, iterable: Iterable[T]) -> list[T]:
-    """list of a map object. Shorthand."""
-    return list(filter(fn, iterable))
-
-
-def starfilter(
-    fn: Callable[[*Args], bool],
-    iterable: Iterable[tuple[*Args]]
-) -> Iterator[tuple[*Args]]:
-    """filter for a function with multiple arguments."""
-    return filter(lambda x: fn(*x), iterable)
-
-from more_itertools import flatten
-
-def iter_split(char: str, iterable: Iterable[str]) -> Iterable[list[str]]:
-    """Map a string into a list of strings split on a acharacter. Shorthand."""
-    return map(lambda s: s.split(char), iterable)
-
-
-def find_element(l: list[T], fn: Callable[[T], bool]) -> tuple[int, T | None]:
-    """Find an element in a list."""
-    for i, x in enumerate(l):
-        if fn(x):
-            return i, x
-    return -1, None
-
-
-def crange(c: tuple[int, int]):
-    """[DEPRECATED] use itertools.product(range(n), range(m)) instead
-    Enumerate all tuple elements from (0,0) to `c`"""
-    x, y = c
-    for i in range(x):
-        for j in range(y):
-            yield (i, j)
-
-
-def compose(
-        fn: Callable[[Any], S],
-        *func: Callable[[T], Any],
-        repeat: int = 1
-) -> Callable[[T], S]:
-    """Compose functions.
-    Returns a function that chain all the functions given in parameter.
-
-    Args:
-        *func (Callable): the functions chained, called from right to left.
-        repeat (int): The number of times to repeat the composition. Default: 1.
-    """  # fn is used for typing: it allows to determine the output type.
-
-    def comp(f, g):
-        return lambda x: f(g(x))
-
-    return reduce(comp, (fn, *func) * repeat)
 
 #
 #  Grid

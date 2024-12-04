@@ -1,4 +1,4 @@
-from typing import Optional, Callable
+from typing import Optional, Callable, TypeVar, TypeVarTuple
 from pathlib import Path
 from time import time
 from functools import partial
@@ -106,3 +106,11 @@ def print_answer(answer, day: int, part: int, execution_time: Optional[float]=No
     if execution_time:
         print(f"\nExecution time: {execution_time:.5f}s", end="")
     print("\n", "=" * 50, sep="")
+
+#
+#  Types
+#
+
+T = TypeVar('T')
+S = TypeVar('S')
+Args = TypeVarTuple('Args')
