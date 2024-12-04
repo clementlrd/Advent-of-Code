@@ -1,38 +1,28 @@
 from aoc import section, load_input
-from aoc.utils import Grid, Coordinate, enumerate_grid, grid_map, print_grid
+from aoc.grid import Grid
+from aoc.utils import Coordinate, Direction, Neighborhood
 
-WORD = "XMAS"
-DIRS_DIAGS = [(1, 1) ,(-1, -1), (1, -1), (-1, 1)]
-DIRS = [(0, 1), (0, -1), (1, 0), (-1, 0), *DIRS_DIAGS]
 
-def parse(data: list[str]) -> Grid[str]:
-    """Parse input into ..."""
-    return [list(d) for d in data]
+def is_word(grid: Grid, pos: Coordinate, d: Direction, word="XMAS") -> bool:
+    return all(grid.is_valid(p := pos + k*d) and grid[p] == l for k, l in enumerate(word))
 
-def is_valid(grid, x, y):
-    n,m= len(grid), len(grid[0])
-    return 0 <= x < n and 0 <= y < m
-
-def is_word(grid, pos, d: tuple, word=WORD) -> bool:
-    x, y = pos
-    i,j = d
-    return all(is_valid(grid, a:=x+k*i, b:=y+k*j) and grid[a][b] == word[k] for k in range(len(word)))
 
 @section.p1(sol=2427)
 def part_1() -> int:
     """Code for section 1"""
-    grid = parse(load_input())
-    return sum(is_word(grid, pos, d)  for pos, c in enumerate_grid(grid) if c=="X" for d in DIRS)
+    grid = Grid([list(r) for r in load_input()])
+    return sum(is_word(grid, Coordinate(pos), d)  for pos, c in grid.enumerate() if c=="X" for d in Neighborhood())
 
-def count_x_mas(grid, pos) -> int:
-    (x, y) = pos
-    return sum(is_word(grid, (x-di, y-dj), (di, dj), word="MAS") for di, dj in DIRS_DIAGS)
 
 @section.p2(sol=1900)
 def part_2() -> int:
     """Code for section 2"""
-    grid = parse(load_input())
-    return sum(count_x_mas(grid, pos) == 2  for pos, c in enumerate_grid(grid) if c=="A")
+    grid = Grid([list(r) for r in load_input()])
+
+    def count_x_mas(pos: Coordinate) -> int:
+        return sum(is_word(grid, pos - d, d, word="MAS") for d in Neighborhood("cross"))
+    
+    return sum(count_x_mas(Coordinate(pos)) == 2  for pos, c in grid.enumerate() if c == "A")
 
 
 if __name__ == "__main__":
