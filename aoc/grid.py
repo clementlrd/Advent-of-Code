@@ -17,6 +17,9 @@ class Grid[S]:
     def __getitem__(self, idx: Coordinate) -> S:
         return self._data[idx[0]][idx[1]]
 
+    def __setitem__(self, idx: Coordinate, value: S) -> None:
+        self._data[idx[0]][idx[1]] = value
+
     def __iter__(self) -> Iterator[S]:
         return (e for row in self._data for e in row)
 
@@ -37,8 +40,10 @@ class Grid[S]:
 
     @property
     def cols(self) -> Iterator[list[S]]:
-        n, m = self.shape
-        return ([self[i,j] for i in range(n)] for j in range(m))
+        return (self.col(j) for j in range(self.shape[1]))
+
+    def row(self, i: int) -> list[S]: return self._data[i].copy()
+    def col(self, j: int) -> list[S]: return [self[i,j] for i in range(self.shape[0])]
     
     def enumerate(self) -> Iterator[tuple[Coordinate, S]]:
         return ( (ij, self[ij]) for ij in crange(self.shape))
@@ -51,10 +56,10 @@ class Grid[S]:
         return Grid([[ fn((i,j)) for j in range(m)] for i in range(n)])
 
     def subgrid(self, start: Coordinate, end: Coordinate) -> Grid[S]:
-        """Create a subgrid of a grid.
+        """Create a subgrid of the grid. The subgrid can be smaller if it is partially outside.
         Works as range objects, but in two dimensions and end is taken in the subgrid."""
-        (si, sj), (ei, ej) = start, end
-        return Grid([row[sj:ej] for row in self._data[si:ei]])
+        (si, sj), (ei, ej), (n, m) = start, end, self.shape
+        return Grid([row[max(sj, 0):min(ej, m)] for row in self._data[max(si, 0):min(ei, n)]])
 
     def transpose(self) -> Grid[S]:
         """Transpose a grid as it was a matrix."""
