@@ -11,6 +11,10 @@ Coordinate = tuple[int, int]
 class Grid[S]:
     _data: list[list[S]] = field(repr=False)
 
+    @classmethod
+    def from_strings(cls, data: list[str]) -> Grid[str]:
+        return cls([list(r) for r in data])
+
     def __post_init__(self) -> None:
         assert all(len(self._data[i]) == len(self._data[0]) for i in range(self.shape[0]))
 
