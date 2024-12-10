@@ -1,6 +1,6 @@
 from __future__ import annotations
 from collections.abc import Iterator
-from typing import Callable, TypeVar
+from typing import Callable, TypeVar, Self
 from dataclasses import dataclass, field
 
 from .itertools import crange
@@ -14,7 +14,7 @@ class Grid[S]:
 
     @classmethod
     def from_strings(cls, data: list[str]) -> Grid[str]:
-        return cls([list(r) for r in data])
+        return cls([list(r) for r in data])  # type: ignore
 
     def __post_init__(self) -> None:
         assert all(len(self._data[i]) == len(self._data[0]) for i in range(self.shape[0]))
