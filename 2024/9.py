@@ -1,17 +1,15 @@
-from typing import NamedTuple
 from operator import attrgetter
+from dataclasses import dataclass
 
 from aoc import section, load_input
 from aoc.itertools import lmap
 
 
-class Chunk(NamedTuple):
+@dataclass
+class Chunk:
     pos: int
     length: int
     id_: int = -1
-
-    def __repr__(self) -> str:
-        return str(tuple(self if self.id_ != -1 else self[:-1]))
 
 
 def parse(raw_data: list[str]):
@@ -41,27 +39,33 @@ def part_1() -> int:
     """Code for section 1"""
     disk, _, _ = parse(load_input())
 
-    reverse_disk = ((k, id_) for k, id_ in enumerate(disk[::-1]) if id_ != -1)
-    for i in range(len(disk)):
-        if disk[i] == -1:
-            k, id_ = next(reverse_disk)
-            if i >= len(disk) - k:
-                break
-            disk[i] = id_
-            disk[-k - 1] = -1
+    reverse_data_disk = ((i, disk[i]) for i in range(len(disk)-1,-1, -1) if disk[i] != -1)
+    for i in filter(lambda i: disk[i] == -1, range(len(disk))):
+        # get the next piece of data from the right
+        k, id_ = next(reverse_data_disk)
+        # make sure the next free space is not beyond the data
+        if i >= k:
+            break
+        # move data
+        disk[i] = id_
+        disk[k] = -1
 
     return sum( i * v for i, v in enumerate(disk) if v != -1 )
 
 
-# < 8587288893605
-@section.p2()
+@section.p2(sol=6423258376982)
 def part_2() -> int:
     """Code for section 2"""
     disk, free, data = parse(load_input())
 
-    for c in sorted(data, key=attrgetter("id_"), reverse=True):
+    # make sur the free slots are sorted by space, the order is kept during the whole process
+    free.sort(key=attrgetter("pos"))
+    data.sort(key=attrgetter("id_"), reverse=True)
+    for c in data:
         # find available space
-        for free_slot in sorted(free, key=attrgetter("pos")):
+        for free_slot in free:
+            if free_slot.pos > c.pos:
+                break  # don't move chunk if the free slot is farther on the disk 
             if c.length <= free_slot.length:
                 # write data to disk
                 for j in range(free_slot.pos, free_slot.pos + c.length):
@@ -69,14 +73,17 @@ def part_2() -> int:
                 # erase data
                 for j in range(c.pos, c.pos + c.length):
                     disk[j] = -1
-                free.remove(free_slot)
-                # register remaining space
-                if (d := free_slot.length - c.length) > 0:
-                    free.append(Chunk(free_slot.pos + c.length, d))
+                # update remaining space
                 # no need to update the "data" structure as we focus on the disk
+                if (d := free_slot.length - c.length) > 0:
+                    free_slot.pos += c.length; free_slot.length = d
+                    # - don't need to add the freed space as it is above the next data chunk to move
+                    # - don't need to merge free slots as there would be no one to merge
+                else:
+                    free.remove(free_slot)
                 break
 
-    return sum( i * v for i, v in enumerate(disk) if v != -1)
+    return sum( i * v for i, v in enumerate(disk) if v != -1 )
 
 if __name__ == "__main__":
     part_1()
