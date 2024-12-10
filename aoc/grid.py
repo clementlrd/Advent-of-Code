@@ -1,11 +1,12 @@
 from __future__ import annotations
 from collections.abc import Iterator
-from typing import Callable
+from typing import Callable, TypeVar
 from dataclasses import dataclass, field
 
 from .itertools import crange
 
 Coordinate = tuple[int, int]
+R = TypeVar("R")
 
 @dataclass
 class Grid[S]:
@@ -52,7 +53,7 @@ class Grid[S]:
     def enumerate(self) -> Iterator[tuple[Coordinate, S]]:
         return ( (ij, self[ij]) for ij in crange(self.shape))
 
-    def map(self, fn: Callable[[S], S]) -> Grid[S]:
+    def map(self, fn: Callable[[S], R]) -> Grid[R]:
         return Grid([[ fn(e) for e in row] for row in self._data])
 
     def map_pos(self, fn: Callable[[Coordinate], S]) -> Grid[S]:
