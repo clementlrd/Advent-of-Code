@@ -6,6 +6,7 @@ name = "advent-of-code"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "matplotlib" },
     { name = "more-itertools" },
     { name = "requests" },
     { name = "tqdm" },
@@ -18,6 +19,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "matplotlib", specifier = ">=3.9.3" },
     { name = "more-itertools", specifier = ">=10.5.0" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "tqdm", specifier = ">=4.67.1" },

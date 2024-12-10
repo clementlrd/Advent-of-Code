@@ -9,14 +9,10 @@ authors = [
 keywords = ["advent-of-code", "challenge"]
 requires-python = ">=3.12"
 dependencies = [
+    "matplotlib>=3.9.3",
     "more-itertools>=10.5.0",
     "requests>=2.32.3",
     "tqdm>=4.67.1",
-]
-
-[dependency-groups]
-dev = [
-    "matplotlib>=3.9.3",
 ]
 
 [tool.uv]
