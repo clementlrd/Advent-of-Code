@@ -1,5 +1,5 @@
+from multiprocess.pool import Pool
 from copy import deepcopy
-from tqdm import tqdm
 from aoc import section, load_input
 from aoc.grid import Grid
 from aoc.utils import Coordinate, Direction, Neighborhood
@@ -59,8 +59,8 @@ def part_2() -> int:
         return False
 
     path_pos = [p for p, e in path.enumerate() if e in REPR.values() if p != start]
-
-    return sum(is_loop(p) for p in tqdm(path_pos))
+    pool = Pool()  # note: I don't know why it works as I update the same grid for the forward
+    return sum(pool.map(is_loop, path_pos))
 
 
 if __name__ == "__main__":
